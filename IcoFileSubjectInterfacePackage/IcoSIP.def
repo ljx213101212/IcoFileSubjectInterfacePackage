@@ -1,0 +1,8 @@
+LIBRARY IcoFileSubjectInterfacePackage
+	EXPORTS DllRegisterServer PRIVATE
+	EXPORTS DllUnregisterServer PRIVATE
+	EXPORTS IcoCryptSIPGetSignedDataMsg
+	EXPORTS IcoCryptSIPPutSignedDataMsg
+	EXPORTS IcoCryptSIPCreateIndirectData
+	EXPORTS IcoCryptSIPVerifyIndirectData
+	EXPORTS IcoIsFileSupportedName
