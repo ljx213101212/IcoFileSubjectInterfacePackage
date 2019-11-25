@@ -175,7 +175,17 @@ STDAPI DllUnregisterServer()
 		memset(pInternalIndirectData, 0, sizeof(INTERNAL_SIP_INDIRECT_DATA));
 
 		DWORD error;
-		if (!IcoDigestChunks(pSubjectInfo->hFile, hHashHandle, dwHashSize, &pInternalIndirectData->digest[0], &error))
+
+		//
+		IcoFileInfo icoInfo;
+		ICO_FILE_INFO icoFileInfo;
+		icoInfo.GetIcoFileInfo(pSubjectInfo->hFile, pSubjectInfo->pwsFileName ,&icoFileInfo);
+		if (!IcoDigestChunks(pSubjectInfo->hFile, hHashHandle, dwHashSize, 
+			icoFileInfo.beforePNGStartPosition,
+			icoFileInfo.PNGStartPosition,
+			icoFileInfo.afterPNGStartPosition,
+			icoFileInfo.fileEndPosition,
+			&pInternalIndirectData->digest[0], &error))
 		{
 			PNGSIP_ERROR_FAIL(error);
 		}
@@ -240,7 +250,17 @@ STDAPI DllUnregisterServer()
 		{
 			PNGSIP_ERROR_FAIL(ERROR_INVALID_PARAMETER);
 		}
-		if (!IcoDigestChunks(pSubjectInfo->hFile, hHashHandle, dwHashSize, &digestBuffer[0], &error))
+		//
+		IcoFileInfo icoInfo;
+		ICO_FILE_INFO icoFileInfo;
+		icoInfo.GetIcoFileInfo(pSubjectInfo->hFile, pSubjectInfo->pwsFileName, &icoFileInfo);
+
+		if (!IcoDigestChunks(pSubjectInfo->hFile, hHashHandle, dwHashSize, 
+			icoFileInfo.beforePNGStartPosition,
+			icoFileInfo.PNGStartPosition,
+			icoFileInfo.afterPNGStartPosition,
+			icoFileInfo.fileEndPosition,
+			&digestBuffer[0], &error))
 		{
 			PNGSIP_ERROR_FAIL(error);
 		}

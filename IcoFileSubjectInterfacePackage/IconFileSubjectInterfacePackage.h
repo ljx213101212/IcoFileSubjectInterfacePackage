@@ -2,6 +2,7 @@
 
 #include "pch.h"
 #include "pngsip.h"
+#include "IcoFileInfo.h"
 
 #define MAX_HASH_SIZE 64
 #define MAX_OID_SIZE 128

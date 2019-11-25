@@ -164,6 +164,7 @@
     <ClInclude Include="FileContext.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="IcoDigest.h" />
+    <ClInclude Include="IcoFileInfo.h" />
     <ClInclude Include="IconFileSubjectInterfacePackage.h" />
     <ClInclude Include="pngsip.h" />
     <ClInclude Include="pch.h" />
@@ -172,6 +173,7 @@
     <ClCompile Include="crc.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="IcoDigest.cpp" />
+    <ClCompile Include="IcoFIleInfo.cpp" />
     <ClCompile Include="IcoFileSubjectInterfacePackage.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

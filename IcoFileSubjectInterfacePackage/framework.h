@@ -6,3 +6,6 @@
 #include <windows.h>
 #include <wincrypt.h>
 #include <mssip.h>
+#include <stdio.h>
+#include <tchar.h>
+#include <stdlib.h>
