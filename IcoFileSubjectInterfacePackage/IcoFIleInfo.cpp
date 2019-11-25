@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "IcoFileInfo.h"
+#include "FileUtil.h"
 
 
 #define BUFFER_SIZE 0x20000
@@ -36,19 +37,20 @@ BOOL IcoFileInfo::GetIcoFileInfo(HANDLE hFile, LPCTSTR szFileName, ICO_FILE_INFO
 		//MessageBox(hWndMain, TEXT("Error Opening File for Reading"), szFileName, MB_OK);
 		return NULL;
 	}
+	MyUtility::ResetFilePointer(hFile);
 	info->beforePNGStartPosition = GetFilePointer(hFile);
 	// Allocate memory for the resource structure
 	if ((lpIR = (LPICONRESOURCE)malloc(sizeof(ICONRESOURCE))) == NULL)
 	{
 		//MessageBox(hWndMain, TEXT("Error Allocating Memory"), szFileName, MB_OK);
-		CloseHandle(hFile);
+		//CloseHandle(hFile);
 		return NULL;
 	}
 	// Read in the header
 	if ((lpIR->nNumImages = ReadICOHeader(hFile)) == (UINT)-1)
 	{
 		//MessageBox(hWndMain, TEXT("Error Reading File Header"), szFileName, MB_OK);
-		CloseHandle(hFile);
+		//CloseHandle(hFile);
 		free(lpIR);
 		return NULL;
 	}
@@ -56,7 +58,7 @@ BOOL IcoFileInfo::GetIcoFileInfo(HANDLE hFile, LPCTSTR szFileName, ICO_FILE_INFO
 	if ((lpNew = (LPICONRESOURCE)realloc(lpIR, sizeof(ICONRESOURCE) + ((lpIR->nNumImages - 1) * sizeof(ICONIMAGE)))) == NULL)
 	{
 		//MessageBox(hWndMain, TEXT("Error Allocating Memory"), szFileName, MB_OK);
-		CloseHandle(hFile);
+		//CloseHandle(hFile);
 		free(lpIR);
 		return NULL;
 	}
@@ -68,7 +70,7 @@ BOOL IcoFileInfo::GetIcoFileInfo(HANDLE hFile, LPCTSTR szFileName, ICO_FILE_INFO
 	if ((lpIDE = (LPICONDIRENTRY)malloc(lpIR->nNumImages * sizeof(ICONDIRENTRY))) == NULL)
 	{
 		//MessageBox(hWndMain, TEXT("Error Allocating Memory"), szFileName, MB_OK);
-		CloseHandle(hFile);
+		//CloseHandle(hFile);
 		free(lpIR);
 		return NULL;
 	}
@@ -76,14 +78,14 @@ BOOL IcoFileInfo::GetIcoFileInfo(HANDLE hFile, LPCTSTR szFileName, ICO_FILE_INFO
 	if (!ReadFile(hFile, lpIDE, lpIR->nNumImages * sizeof(ICONDIRENTRY), &dwBytesRead, NULL))
 	{
 		//MessageBox(hWndMain, TEXT("Error Reading File"), szFileName, MB_OK);
-		CloseHandle(hFile);
+		//CloseHandle(hFile);
 		free(lpIR);
 		return NULL;
 	}
 	if (dwBytesRead != lpIR->nNumImages * sizeof(ICONDIRENTRY))
 	{
 		//MessageBox(hWndMain, TEXT("Error Reading File"), szFileName, MB_OK);
-		CloseHandle(hFile);
+		//CloseHandle(hFile);
 		free(lpIR);
 		return NULL;
 	}
@@ -95,7 +97,7 @@ BOOL IcoFileInfo::GetIcoFileInfo(HANDLE hFile, LPCTSTR szFileName, ICO_FILE_INFO
 		if ((lpIR->IconImages[i].lpBits = (LPBYTE)malloc(lpIDE[i].dwBytesInRes)) == NULL)
 		{
 			//MessageBox(hWndMain, TEXT("Error Allocating Memory"), szFileName, MB_OK);
-			CloseHandle(hFile);
+			//CloseHandle(hFile);
 			free(lpIR);
 			free(lpIDE);
 			return NULL;
@@ -106,7 +108,7 @@ BOOL IcoFileInfo::GetIcoFileInfo(HANDLE hFile, LPCTSTR szFileName, ICO_FILE_INFO
 		if (SetFilePointer(hFile, lpIDE[i].dwImageOffset, NULL, FILE_BEGIN) == 0xFFFFFFFF)
 		{
 			//MessageBox(hWndMain, TEXT("Error Seeking in File"), szFileName, MB_OK);
-			CloseHandle(hFile);
+			//CloseHandle(hFile);
 			free(lpIR);
 			free(lpIDE);
 			return NULL;
@@ -116,7 +118,7 @@ BOOL IcoFileInfo::GetIcoFileInfo(HANDLE hFile, LPCTSTR szFileName, ICO_FILE_INFO
 		if (!ReadFile(hFile, lpIR->IconImages[i].lpBits, lpIDE[i].dwBytesInRes, &dwBytesRead, NULL))
 		{
 			//MessageBox(hWndMain, TEXT("Error Reading File"), szFileName, MB_OK);
-			CloseHandle(hFile);
+			//CloseHandle(hFile);
 			free(lpIR);
 			free(lpIDE);
 			return NULL;
@@ -130,7 +132,7 @@ BOOL IcoFileInfo::GetIcoFileInfo(HANDLE hFile, LPCTSTR szFileName, ICO_FILE_INFO
 		if (dwBytesRead != lpIDE[i].dwBytesInRes)
 		{
 			//MessageBox(hWndMain, TEXT("Error Reading File"), szFileName, MB_OK);
-			CloseHandle(hFile);
+			//CloseHandle(hFile);
 			free(lpIDE);
 			free(lpIR);
 			return NULL;
@@ -139,7 +141,7 @@ BOOL IcoFileInfo::GetIcoFileInfo(HANDLE hFile, LPCTSTR szFileName, ICO_FILE_INFO
 		if (!AdjustIconImagePointers(&(lpIR->IconImages[i])))
 		{
 			//MessageBox(hWndMain, TEXT("Error Converting to Internal Format"), szFileName, MB_OK);
-			CloseHandle(hFile);
+			//CloseHandle(hFile);
 			free(lpIDE);
 			free(lpIR);
 			return NULL;
@@ -155,7 +157,8 @@ BOOL IcoFileInfo::GetIcoFileInfo(HANDLE hFile, LPCTSTR szFileName, ICO_FILE_INFO
 	// Clean up	
 	free(lpIDE);
 	free(lpRPI);
-	CloseHandle(hFile);
+	//CloseHandle(hFile);
+	MyUtility::ResetFilePointer(hFile);
 	return true;
 }
 UINT ReadICOHeader(HANDLE hFile)

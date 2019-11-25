@@ -54,7 +54,7 @@ STDAPI DllUnregisterServer()
 
 	BOOL WINAPI IcoIsFileSupportedName(WCHAR* pwszFileName, GUID* pgSubject)
 	{
-		const WCHAR* ext = L".png";
+		const WCHAR* ext = L".ico";
 		size_t len = wcslen(pwszFileName);
 		if (len < wcslen(ext))
 		{
