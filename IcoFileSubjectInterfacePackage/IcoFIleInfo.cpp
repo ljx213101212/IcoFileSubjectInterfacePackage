@@ -31,7 +31,7 @@ BOOL IcoFileInfo::GetIcoFileInfo(HANDLE hFile, LPCTSTR szFileName, ICO_FILE_INFO
 
 	if (info == nullptr) { return NULL; }
 	// Open the file
-	if (hFile = nullptr)
+	if (hFile == nullptr)
 	{
 		//MessageBox(hWndMain, TEXT("Error Opening File for Reading"), szFileName, MB_OK);
 		return NULL;

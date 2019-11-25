@@ -5,6 +5,8 @@
 #include "IcoDigest.h"
 #include "crc.h"
 #include "pngsip.h"
+#include "IcoFileInfo.h"
+#include "FileUtil.h"
 
 
 #define BUFFER_SIZE 0x10000
@@ -14,7 +16,50 @@
 #define PNG_TAG_SIZE 4
 
 
-
+#define CHUNK_SIZE 0x400
+//namespace myUtility 
+//{
+//	DWORD  GetFilePointer(HANDLE hFile) {
+//		return SetFilePointer(hFile, 0, NULL, FILE_CURRENT);
+//	}
+//
+//	void ExpandFile(HANDLE hFile, DWORD expandSize) {
+//		if (SetFilePointer(hFile, 0, NULL, FILE_END) == 0xFFFFFFFF)
+//		{
+//			return;
+//		}
+//		//WriteFile(fHandle, str, totalLength, &bytesWrittenCurr, NULL);
+//		BYTE dummyData[BUFFER_SIZE] = { 0x00 };
+//		DWORD bytesWrite;
+//		::WriteFile(hFile, dummyData, expandSize, &bytesWrite, NULL);
+//	}
+//
+//	BOOL MoveBytesToFileEnd(HANDLE hFile, DWORD start, DWORD end, DWORD expandSize) {
+//
+//		LONG writeTotal = 0;
+//		while ((DWORD)writeTotal < expandSize) {
+//			if (SetFilePointer(hFile, -(CHUNK_SIZE + (LONG)expandSize + writeTotal), NULL, FILE_END) == 0xFFFFFFFF)
+//			{
+//				return NULL;
+//			}
+//			BYTE buffer[CHUNK_SIZE];
+//			DWORD bytesRead = 0;
+//			if (!::ReadFile(hFile, &buffer, CHUNK_SIZE, &bytesRead, NULL)) {
+//				return NULL;
+//			}
+//			if (SetFilePointer(hFile, -(CHUNK_SIZE + writeTotal), NULL, FILE_END) == 0xFFFFFFFF)
+//			{
+//				return NULL;
+//			}
+//			DWORD bytesWrite = 0;
+//			if (!::WriteFile(hFile, &buffer, CHUNK_SIZE, &bytesWrite, NULL)) {
+//				return NULL;
+//			}
+//			writeTotal += CHUNK_SIZE;
+//		}
+//		return true;
+//	}
+//};
 
 DWORD GetBeforePNGSize(LONG PNGStartPosition, LONG beforePNGStartPosition) {
 	return (DWORD)(PNGStartPosition - beforePNGStartPosition);
@@ -47,20 +92,6 @@ BOOL PNGSIP_CALL IcoDigestChunks(HANDLE hFile, BCRYPT_HASH_HANDLE hHashHandle,
 	if (!HashCustomChunk(hFile, hHashHandle, GetBeforePNGSize(PNGStartPosition, beforePNGStartPosition), &result)) {
 		PNGSIP_ERROR_FAIL(result);
 	}
-
-
-	/*if (!HashHeader(hFile, hHashHandle, &result))
-	{
-		PNGSIP_ERROR_FAIL(result);
-	}
-	for (;;)
-	{
-		if (!HashChunk(hFile, hHashHandle, &result))
-		{
-			break;
-		}
-	}*/
-
 	//Hash PNG Chunk.
 	if (!HashPNGChunk(hFile, hHashHandle, PNGStartPosition, GetPNGSize(PNGStartPosition, afterPNGStartPosition), &result)) {
 		PNGSIP_ERROR_FAIL(result);
@@ -226,10 +257,31 @@ BOOL PNGSIP_CALL HashChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, DWORD &hashed
 	PNGSIP_ERROR_FINISH_END_CLEANUP;
 }
 
-BOOL PNGSIP_CALL IcoPutDigest(HANDLE hFile, DWORD dwSignatureSize, PBYTE pSignature, DWORD* error)
+
+
+BOOL PNGSIP_CALL IcoPutDigest(HANDLE hFile, LPCWSTR pwsFileName, DWORD dwSignatureSize, PBYTE pSignature, DWORD* error)
 {
 	PNGSIP_ERROR_BEGIN;
-	if (SetFilePointer(hFile, -12, NULL, FILE_END) == INVALID_SET_FILE_POINTER)
+	IcoFileInfo info;
+	ICO_FILE_INFO icoFileInfo;
+	LONG pngStartOffset, pngEndOffset, fileEndOffset;
+	DWORD pngSize = 0;
+	if (!info.GetIcoFileInfo(hFile, pwsFileName, &icoFileInfo)) {
+		PNGSIP_ERROR_FAIL_LAST_ERROR();
+	}
+	pngStartOffset = icoFileInfo.PNGStartPosition;
+	pngEndOffset = icoFileInfo.afterPNGStartPosition;
+	fileEndOffset = icoFileInfo.fileEndPosition;
+	pngSize = (DWORD)(pngEndOffset - pngStartOffset);
+
+	MyUtility::ExpandFile(hFile, dwSignatureSize);
+	MyUtility::MoveBytesToFileEnd(hFile, pngEndOffset, fileEndOffset, dwSignatureSize);
+
+	if (SetFilePointer(hFile, pngEndOffset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
+	{
+		PNGSIP_ERROR_FAIL(ERROR_BAD_FORMAT);
+	}
+	if (SetFilePointer(hFile, -12, NULL, FILE_CURRENT) == INVALID_SET_FILE_POINTER)
 	{
 		PNGSIP_ERROR_FAIL(ERROR_BAD_FORMAT);
 	}
@@ -271,17 +323,34 @@ BOOL PNGSIP_CALL IcoPutDigest(HANDLE hFile, DWORD dwSignatureSize, PBYTE pSignat
 	PNGSIP_ERROR_FINISH_END_CLEANUP;
 }
 
-BOOL PNGSIP_CALL IcoGetDigest(HANDLE hFile, DWORD* pcbSignatureSize, PBYTE pSignature, DWORD* error)
+BOOL PNGSIP_CALL IcoGetDigest(HANDLE hFile, LPCWSTR pwsFileName, DWORD* pcbSignatureSize, PBYTE pSignature, DWORD* error)
 {
 	PNGSIP_ERROR_BEGIN;
-	if (SetFilePointer(hFile, PNG_HEADER_SIZE, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
+
+	IcoFileInfo info;
+	ICO_FILE_INFO icoFileInfo;
+	LONG pngStartOffset, pngEndOffset, fileEndOffset;
+	DWORD pngSize = 0;
+	if (!info.GetIcoFileInfo(hFile, pwsFileName, &icoFileInfo)) {
+		PNGSIP_ERROR_FAIL_LAST_ERROR();
+	}
+	pngStartOffset = icoFileInfo.PNGStartPosition;
+	pngEndOffset = icoFileInfo.afterPNGStartPosition;
+	fileEndOffset = icoFileInfo.fileEndPosition;
+	pngSize = pngEndOffset - pngStartOffset;
+	//expand the file
+	//utility::ExpandFile(hFile, *pcbSignatureSize);
+	//utility::MoveBytesToFileEnd(hFile, pngEndOffset, fileEndOffset, *pcbSignatureSize);
+
+	if (SetFilePointer(hFile, pngStartOffset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
 	{
 		PNGSIP_ERROR_FAIL_LAST_ERROR();
 	}
 	{
+		//Locate the PNG header position.
 		DWORD bytesRead = 0, totalRead = 0;
 		BYTE buffer[BUFFER_SIZE];
-		for (;;)
+		for (;totalRead < pngSize;)
 		{
 			if (!ReadFile(hFile, &buffer[0], PNG_CHUNK_HEADER_SIZE, &bytesRead, NULL))
 			{

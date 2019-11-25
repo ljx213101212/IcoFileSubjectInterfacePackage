@@ -162,6 +162,7 @@
   <ItemGroup>
     <ClInclude Include="crc.h" />
     <ClInclude Include="FileContext.h" />
+    <ClInclude Include="FileUtil.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="IcoDigest.h" />
     <ClInclude Include="IcoFileInfo.h" />
@@ -172,6 +173,7 @@
   <ItemGroup>
     <ClCompile Include="crc.cpp" />
     <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="FileUtil.cpp" />
     <ClCompile Include="IcoDigest.cpp" />
     <ClCompile Include="IcoFIleInfo.cpp" />
     <ClCompile Include="IcoFileSubjectInterfacePackage.cpp" />

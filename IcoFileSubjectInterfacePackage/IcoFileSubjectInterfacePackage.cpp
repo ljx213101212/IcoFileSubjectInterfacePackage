@@ -84,7 +84,7 @@ STDAPI DllUnregisterServer()
 		}
 		*pdwEncodingType = X509_ASN_ENCODING | PKCS_7_ASN_ENCODING;
 		DWORD error;
-		if (IcoGetDigest(pSubjectInfo->hFile, pcbSignedDataMsg, pbSignedDataMsg, &error))
+		if (IcoGetDigest(pSubjectInfo->hFile, pSubjectInfo->pwsFileName, pcbSignedDataMsg, pbSignedDataMsg, &error))
 		{
 			PNGSIP_ERROR_SUCCESS();
 		}
@@ -106,7 +106,7 @@ STDAPI DllUnregisterServer()
 			PNGSIP_ERROR_FAIL(ERROR_INVALID_PARAMETER);
 		}
 		DWORD error;
-		if (IcoPutDigest(pSubjectInfo->hFile, cbSignedDataMsg, pbSignedDataMsg, &error))
+		if (IcoPutDigest(pSubjectInfo->hFile, pSubjectInfo->pwsFileName, cbSignedDataMsg, pbSignedDataMsg, &error))
 		{
 			PNGSIP_ERROR_SUCCESS();
 		}
