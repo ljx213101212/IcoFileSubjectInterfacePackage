@@ -275,7 +275,7 @@ BOOL PNGSIP_CALL IcoPutDigest(HANDLE hFile, LPCWSTR pwsFileName, DWORD dwSignatu
 	pngSize = (DWORD)(pngEndOffset - pngStartOffset);
 
 	MyUtility::ExpandFile(hFile, dwSignatureSize);
-	MyUtility::MoveBytesToFileEnd(hFile, pngEndOffset, fileEndOffset, dwSignatureSize);
+	MyUtility::MoveBytesToFileEnd(hFile, pngEndOffset, fileEndOffset,dwSignatureSize);
 
 	if (SetFilePointer(hFile, pngEndOffset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
 	{

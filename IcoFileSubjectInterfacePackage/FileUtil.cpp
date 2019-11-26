@@ -23,10 +23,11 @@ namespace MyUtility {
 		::WriteFile(hFile, dummyData, expandSize, &bytesWrite, NULL);
 	}
 
-	BOOL MoveBytesToFileEnd(HANDLE hFile, DWORD start, DWORD end , DWORD expandSize) {
+	BOOL MoveBytesToFileEnd(HANDLE hFile, DWORD start, DWORD end, DWORD expandSize) {
 
 		LONG writeTotal = 0;
-		while ((expandSize - writeTotal) >= CHUNK_SIZE) {
+		LONG moveTotal = (DWORD)(end - start);
+		while ((moveTotal - writeTotal) >= CHUNK_SIZE) {
 			if (SetFilePointer(hFile, -(CHUNK_SIZE + (LONG)expandSize + writeTotal), NULL, FILE_END) == 0xFFFFFFFF)
 			{
 				return NULL;
@@ -46,25 +47,25 @@ namespace MyUtility {
 			}
 			writeTotal += CHUNK_SIZE;
 		}
-		if (SetFilePointer(hFile, -(((LONG)expandSize - writeTotal) + (LONG)expandSize + writeTotal), NULL, FILE_END) == 0xFFFFFFFF)
+		if (SetFilePointer(hFile, -((moveTotal - writeTotal) + (LONG)expandSize + writeTotal), NULL, FILE_END) == 0xFFFFFFFF)
 		{
 			return NULL;
 		}
 		BYTE buffer[CHUNK_SIZE];
 		DWORD bytesRead = 0;
-		if (!::ReadFile(hFile, &buffer, ((LONG)expandSize - writeTotal), &bytesRead, NULL)) {
+		if (!::ReadFile(hFile, &buffer, (moveTotal - writeTotal), &bytesRead, NULL)) {
 			return NULL;
 		}
-		if (SetFilePointer(hFile, -(((LONG)expandSize - writeTotal) + writeTotal), NULL, FILE_END) == 0xFFFFFFFF)
+		if (SetFilePointer(hFile, -moveTotal, NULL, FILE_END) == 0xFFFFFFFF)
 		{
 			return NULL;
 		}
 		DWORD bytesWrite = 0;
-		if (!::WriteFile(hFile, &buffer, ((LONG)expandSize - writeTotal), &bytesWrite, NULL)) {
+		if (!::WriteFile(hFile, &buffer, (moveTotal - writeTotal), &bytesWrite, NULL)) {
 			return NULL;
 		}
-		writeTotal += ((LONG)expandSize - writeTotal);
-		if (writeTotal != expandSize) { return NULL; }
+		writeTotal += (moveTotal - writeTotal);
+		if (writeTotal != moveTotal) { return NULL; }
 
 		return true;
 	}
