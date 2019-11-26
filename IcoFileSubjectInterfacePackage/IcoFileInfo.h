@@ -92,4 +92,5 @@ class IcoFileInfo {
 
 public:
 	BOOL GetIcoFileInfo(HANDLE hFile, LPCTSTR szFileName, ICO_FILE_INFO* info);
+	BOOL UpdateIcoHeader(HANDLE hFile, DWORD signatureSize, DWORD pngHeaderSizeOffset);
 };

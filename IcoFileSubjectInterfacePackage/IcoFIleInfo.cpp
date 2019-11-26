@@ -5,6 +5,8 @@
 
 #define BUFFER_SIZE 0x20000
 #define PNG_SIG_SIZE 8
+#define ICO_SIZE_OF_DATA_SIZE 4
+#define ICO_SIZE_OF_OFFSET 4
 
 //Declaration of methods. 
 UINT ReadICOHeader(HANDLE hFile);
@@ -192,6 +194,26 @@ UINT ReadICOHeader(HANDLE hFile)
 		return (UINT)-1;
 	// Return the count
 	return Input;
+}
+
+BOOL UpdateIcoHeader(HANDLE hFile, DWORD signatureSize, DWORD pngHeaderSizeOffset) 
+{
+	MyUtility::ResetFilePointer(hFile);
+	if (!SetFilePointer(hFile, pngHeaderSizeOffset, NULL, FILE_BEGIN)) {
+		return false;
+	}
+	//update png header size (little endian by default)
+	BYTE buffer[ICO_SIZE_OF_DATA_SIZE];
+	DWORD bytesRead = 0;
+	if (!::ReadFile(hFile, &buffer, ICO_SIZE_OF_DATA_SIZE, &bytesRead, NULL)) {
+		return false;
+	}
+	unsigned int size = buffer[0] | buffer[1] << 8 | buffer[2] << 16 | buffer[3] << 24;
+	size += (unsigned int) signatureSize;
+	buffer[3] = size >> 24;
+	buffer[2] = (size - buffer[3]) >> 16;
+	buffer[1] = (size - buffer[2]) >> 8;
+	buffer[0] = (size - buffer[1]);
 }
 
 
