@@ -2,11 +2,7 @@
 #include "IcoFileInfo.h"
 #include "FileUtil.h"
 
-
 #define BUFFER_SIZE 0x20000
-#define PNG_SIG_SIZE 8
-#define ICO_SIZE_OF_DATA_SIZE 4
-#define ICO_SIZE_OF_OFFSET 4
 
 //Declaration of methods. 
 UINT ReadICOHeader(HANDLE hFile);
@@ -130,6 +126,8 @@ BOOL IcoFileInfo::GetIcoFileInfo(HANDLE hFile, LPCTSTR szFileName, ICO_FILE_INFO
 		if (CheckPNGSignature(lpIR->IconImages[i].lpBits)) {
 			info->afterPNGStartPosition = GetFilePointer(hFile);
 			info->PNGStartPosition = info->afterPNGStartPosition - dwBytesRead;
+			info->nthImageIsPng = i + 1;
+			info->numOfIco = lpIR->nNumImages;
 		}
 		if (dwBytesRead != lpIDE[i].dwBytesInRes)
 		{
@@ -196,9 +194,33 @@ UINT ReadICOHeader(HANDLE hFile)
 	return Input;
 }
 
-BOOL UpdateIcoHeader(HANDLE hFile, DWORD signatureSize, DWORD pngHeaderSizeOffset) 
+VOID GetSignatureSize(LPBYTE pngChunk, DWORD pngChunkSize, const char* signature, DWORD* signatureSize) 
 {
+	DWORD bytesRead = 0;
+	BYTE buffer[BUFFER_SIZE];
+	DWORD pngChunkPtr = 0;
+
+	pngChunkPtr += PNG_CHUNK_HEADER_SIZE;
+	while (pngChunkPtr < pngChunkSize) {
+		memcpy_s(&buffer, PNG_CHUNK_HEADER_SIZE, pngChunk + pngChunkPtr, PNG_CHUNK_HEADER_SIZE);
+		const unsigned int size = buffer[3] | buffer[2] << 8 | buffer[1] << 16 | buffer[0] << 24;
+		const unsigned char* tag = ((const unsigned char*)&buffer[4]);
+		if (0 == memcmp(tag, signature, PNG_TAG_SIZE))
+		{
+			*signatureSize = PNG_CHUNK_HEADER_SIZE + size + PNG_CRC_SIZE;
+			break;
+		}
+		pngChunkPtr += PNG_CHUNK_HEADER_SIZE + size + PNG_CRC_SIZE;
+	}
+}
+BOOL IcoFileInfo::UpdateIcoHeader(HANDLE hFile, DWORD signatureSize, BOOL IsOriginToUpdate)
+{
+	ICO_FILE_INFO info;
+	IcoFileInfo icoFileInfo;
+	LONG switchFatcor = IsOriginToUpdate ? 1 : -1;
+	icoFileInfo.GetIcoFileInfo(hFile, TEXT(""), &info);
 	MyUtility::ResetFilePointer(hFile);
+	DWORD pngHeaderSizeOffset = ICO_HEADER_SIZE + (info.nthImageIsPng - 1) * ICO_DIRECTORY_CHUNK_SIZE + ICO_OFFSET_OF_DATA_SIZE_IN_HEADER;
 	if (!SetFilePointer(hFile, pngHeaderSizeOffset, NULL, FILE_BEGIN)) {
 		return false;
 	}
@@ -208,12 +230,53 @@ BOOL UpdateIcoHeader(HANDLE hFile, DWORD signatureSize, DWORD pngHeaderSizeOffse
 	if (!::ReadFile(hFile, &buffer, ICO_SIZE_OF_DATA_SIZE, &bytesRead, NULL)) {
 		return false;
 	}
-	unsigned int size = buffer[0] | buffer[1] << 8 | buffer[2] << 16 | buffer[3] << 24;
-	size += (unsigned int) signatureSize;
-	buffer[3] = size >> 24;
-	buffer[2] = (size - buffer[3]) >> 16;
-	buffer[1] = (size - buffer[2]) >> 8;
-	buffer[0] = (size - buffer[1]);
+	LONG size = buffer[0] | buffer[1] << 8 | buffer[2] << 16 | buffer[3] << 24;
+	size += ((LONG)signatureSize * switchFatcor);
+	//little endian
+	buffer[0] = size & 0xFF;
+	buffer[1] = (size >> 8) & 0xFF;
+	buffer[2] = (size >> 16) & 0xFF;
+	buffer[3] = (size >> 24) & 0xFF;
+
+	//Update file pointer 
+	if (!SetFilePointer(hFile, -ICO_SIZE_OF_DATA_SIZE, NULL, FILE_CURRENT)) {
+		return false;
+	}
+	DWORD bytesWrite = 0;
+	if (!::WriteFile(hFile, &buffer, ICO_SIZE_OF_DATA_SIZE, &bytesWrite, NULL)) {
+		return false;
+	}
+
+	if (!SetFilePointer(hFile, 4, NULL, FILE_CURRENT)) {
+		return false;
+	}
+	//update rest of BMP file offset.
+	INT32 restNumOfBMPFile = info.numOfIco - info.nthImageIsPng;
+	for (int i = 0; i < restNumOfBMPFile; i++) {
+		if (!SetFilePointer(hFile, ICO_PNG_LEFT_OVER_BMP_OFFSET, NULL, FILE_CURRENT)) {
+			return false;
+		}
+		BYTE offsetBuffer[ICO_SIZE_OF_DATA_OFFSET];
+		if (!::ReadFile(hFile, &offsetBuffer, ICO_SIZE_OF_DATA_OFFSET, &bytesRead, NULL)) {
+			return false;
+		}
+		LONG offset = offsetBuffer[0] | offsetBuffer[1] << 8 | offsetBuffer[2] << 16 | offsetBuffer[3] << 24;
+		offset += ((LONG)signatureSize * switchFatcor);
+		//little endian
+		buffer[0] = offset & 0xFF;
+		buffer[1] = (offset >> 8) & 0xFF;
+		buffer[2] = (offset >> 16) & 0xFF;
+		buffer[3] = (offset >> 24) & 0xFF;
+		//Update file pointer 
+		if (!SetFilePointer(hFile, -ICO_SIZE_OF_DATA_OFFSET, NULL, FILE_CURRENT)) {
+			return false;
+		}
+		bytesWrite = 0;
+		if (!::WriteFile(hFile, &buffer, ICO_SIZE_OF_DATA_OFFSET, &bytesWrite, NULL)) {
+			return false;
+		}
+	}
+	return true;
 }
 
 

@@ -1,8 +1,7 @@
 #pragma once
 #include "pch.h"
 #include "pngsip.h"
-#define PNG_SIG_CHUNK_TYPE "iTXt"
-#define PNG_IEND_CHUNK_TYPE "IEND"
+
 
 
 //Get Hash from the PNG

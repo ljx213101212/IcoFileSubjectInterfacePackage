@@ -3,6 +3,7 @@
 
 #define BUFFER_SIZE 0x10000
 #define CHUNK_SIZE 0x400
+
 namespace MyUtility {
 	DWORD  GetFilePointer(HANDLE hFile) {
 		return SetFilePointer(hFile, 0, NULL, FILE_CURRENT);

@@ -84,6 +84,7 @@ BOOL WINAPI IcoCryptSIPGetSignedDataMsg(SIP_SUBJECTINFO* pSubjectInfo, DWORD* pd
 	}
 	*pdwEncodingType = X509_ASN_ENCODING | PKCS_7_ASN_ENCODING;
 	DWORD error;
+
 	if (IcoGetDigest(pSubjectInfo->hFile, pSubjectInfo->pwsFileName, pcbSignedDataMsg, pbSignedDataMsg, &error))
 	{
 		PNGSIP_ERROR_SUCCESS();
@@ -108,6 +109,8 @@ BOOL WINAPI IcoCryptSIPPutSignedDataMsg(SIP_SUBJECTINFO* pSubjectInfo, DWORD dwE
 	DWORD error;
 	if (IcoPutDigest(pSubjectInfo->hFile, pSubjectInfo->pwsFileName, cbSignedDataMsg, pbSignedDataMsg, &error))
 	{
+		IcoFileInfo icoFileInfo;
+		icoFileInfo.UpdateIcoHeader(pSubjectInfo->hFile, PNG_CHUNK_HEADER_SIZE + cbSignedDataMsg + PNG_CRC_SIZE, true);
 		PNGSIP_ERROR_SUCCESS();
 	}
 	else
@@ -253,8 +256,8 @@ BOOL WINAPI IcoCryptSIPVerifyIndirectData(SIP_SUBJECTINFO* pSubjectInfo, SIP_IND
 	//
 	IcoFileInfo icoInfo;
 	ICO_FILE_INFO icoFileInfo;
+	icoInfo.UpdateIcoHeader(pSubjectInfo->hFile, PNG_CHUNK_HEADER_SIZE +  0x825 + PNG_CRC_SIZE, false);
 	icoInfo.GetIcoFileInfo(pSubjectInfo->hFile, pSubjectInfo->pwsFileName, &icoFileInfo);
-
 	if (!IcoDigestChunks(pSubjectInfo->hFile, hHashHandle, dwHashSize,
 		icoFileInfo.beforePNGStartPosition,
 		icoFileInfo.PNGStartPosition,
@@ -262,14 +265,17 @@ BOOL WINAPI IcoCryptSIPVerifyIndirectData(SIP_SUBJECTINFO* pSubjectInfo, SIP_IND
 		icoFileInfo.fileEndPosition,
 		&digestBuffer[0], &error))
 	{
+		icoInfo.UpdateIcoHeader(pSubjectInfo->hFile, PNG_CHUNK_HEADER_SIZE + 0x825 + PNG_CRC_SIZE, true);
 		PNGSIP_ERROR_FAIL(error);
 	}
 	if (0 == memcmp(&digestBuffer, pIndirectData->Digest.pbData, dwHashSize))
 	{
+		icoInfo.UpdateIcoHeader(pSubjectInfo->hFile, PNG_CHUNK_HEADER_SIZE + 0x825 + PNG_CRC_SIZE, true);
 		PNGSIP_ERROR_SUCCESS();
 	}
 	else
 	{
+		icoInfo.UpdateIcoHeader(pSubjectInfo->hFile, PNG_CHUNK_HEADER_SIZE + 0x825 + PNG_CRC_SIZE, true);
 		PNGSIP_ERROR_FAIL(TRUST_E_SUBJECT_NOT_TRUSTED);
 	}
 

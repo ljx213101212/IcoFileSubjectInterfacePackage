@@ -4,12 +4,16 @@
 
 
 
+
+
 typedef struct ICO_FILE_INFO_
 {
 	LONG beforePNGStartPosition;
 	LONG PNGStartPosition;
 	LONG afterPNGStartPosition;
 	LONG fileEndPosition;
+	LONG nthImageIsPng;
+	LONG numOfIco;
 } ICO_FILE_INFO;
 
 typedef struct
@@ -92,5 +96,6 @@ class IcoFileInfo {
 
 public:
 	BOOL GetIcoFileInfo(HANDLE hFile, LPCTSTR szFileName, ICO_FILE_INFO* info);
-	BOOL UpdateIcoHeader(HANDLE hFile, DWORD signatureSize, DWORD pngHeaderSizeOffset);
+	BOOL UpdateIcoHeader(HANDLE hFile, DWORD signatureSize, BOOL IsOriginToUpdate);
+	VOID GetSignatureSize(LPBYTE pngChunk, DWORD pngChunkSize, const char* signature, DWORD* signatureSize);
 };
