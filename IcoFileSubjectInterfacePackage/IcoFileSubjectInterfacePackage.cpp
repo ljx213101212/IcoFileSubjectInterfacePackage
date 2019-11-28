@@ -134,6 +134,10 @@ BOOL WINAPI IcoCryptSIPCreateIndirectData(SIP_SUBJECTINFO* pSubjectInfo, DWORD* 
 	PCCRYPT_OID_INFO info = CryptFindOIDInfo(CRYPT_OID_INFO_OID_KEY, pSubjectInfo->DigestAlgorithm.pszObjId, CRYPT_HASH_ALG_OID_GROUP_ID);
 	size_t oidLen = strlen(pSubjectInfo->DigestAlgorithm.pszObjId) + sizeof(CHAR);
 	INTERNAL_SIP_INDIRECT_DATA* pInternalIndirectData = (INTERNAL_SIP_INDIRECT_DATA*)pIndirectData;
+	DWORD error;
+	IcoFileInfo icoInfo;
+	ICO_FILE_INFO icoFileInfo;
+
 	if (pSubjectInfo == NULL || pcbIndirectData == NULL)
 	{
 		PNGSIP_ERROR_FAIL(ERROR_INVALID_PARAMETER);
@@ -176,12 +180,6 @@ BOOL WINAPI IcoCryptSIPCreateIndirectData(SIP_SUBJECTINFO* pSubjectInfo, DWORD* 
 	//We checked the size earlier above.
 
 	memset(pInternalIndirectData, 0, sizeof(INTERNAL_SIP_INDIRECT_DATA));
-
-	DWORD error;
-
-	//
-	IcoFileInfo icoInfo;
-	ICO_FILE_INFO icoFileInfo;
 	icoInfo.GetIcoFileInfo(pSubjectInfo->hFile, pSubjectInfo->pwsFileName, &icoFileInfo);
 	if (!IcoDigestChunks(pSubjectInfo->hFile, hHashHandle, dwHashSize,
 		icoFileInfo.beforePNGStartPosition,
@@ -227,6 +225,8 @@ BOOL WINAPI IcoCryptSIPVerifyIndirectData(SIP_SUBJECTINFO* pSubjectInfo, SIP_IND
 	DWORD dwHashSize = 0, cbHashSize = sizeof(DWORD);
 	BYTE digestBuffer[MAX_HASH_SIZE];
 	DWORD error;
+	IcoFileInfo icoInfo;
+	ICO_FILE_INFO icoFileInfo;
 	if (pSubjectInfo == NULL || pIndirectData == NULL)
 	{
 		PNGSIP_ERROR_FAIL(ERROR_INVALID_PARAMETER);
@@ -254,9 +254,7 @@ BOOL WINAPI IcoCryptSIPVerifyIndirectData(SIP_SUBJECTINFO* pSubjectInfo, SIP_IND
 	{
 		PNGSIP_ERROR_FAIL(ERROR_INVALID_PARAMETER);
 	}
-	//
-	IcoFileInfo icoInfo;
-	ICO_FILE_INFO icoFileInfo;
+
 	icoInfo.GetIcoFileInfo(pSubjectInfo->hFile, pSubjectInfo->pwsFileName, &icoFileInfo);
 	if (!IcoDigestChunks(pSubjectInfo->hFile, hHashHandle, dwHashSize,
 		icoFileInfo.beforePNGStartPosition,

@@ -18,7 +18,7 @@ typedef struct ICO_FILE_INFO_
 	LONG pngChunkSize;
 	LONG sigChunkOffset;
 	LONG sigChunkSize;
-	std::vector<std::tuple<DWORD, DWORD*, DWORD, DWORD>> iTXtList;
+	std::vector<std::tuple<DWORD, DWORD,DWORD, DWORD, DWORD>> iTXtList;
 } ICO_FILE_INFO;
 
 typedef struct
@@ -102,8 +102,11 @@ class IcoFileInfo {
 public:
 	BOOL GetIcoFileInfo(HANDLE hFile, LPCTSTR szFileName, ICO_FILE_INFO* info);
 	BOOL UpdateIcoHeader(HANDLE hFile, DWORD signatureSize, BOOL IsOriginToUpdate);
+	BOOL UpdateIcoHeaderByHeaderOffset(HANDLE hFile, DWORD pngIndex, DWORD numOfIco, DWORD updateSize, BOOL IsIncrease);
 	BOOL UpdateSignaturePosition(LPBYTE pngChunk, DWORD pngChunkSize, DWORD pngChunkOffset, const char* signature, ICO_FILE_INFO* info);
-	BOOL UpdateITxtTuple(LPBYTE pngChunk, DWORD pngChunkSize, DWORD pngChunkOffset, const char* signature, ICO_FILE_INFO* info);
+	BOOL UpdateITxtTupleList(DWORD pngIndex, LPBYTE pngChunk,  DWORD pngChunkOffset, DWORD pngChunkSize, const char* signature, ICO_FILE_INFO* info);
+	BOOL EraseAllITxtChunk(HANDLE hFile, ICO_FILE_INFO* info);
+	BOOL EraseITxtChunk(HANDLE hFile, DWORD pngIndex, DWORD numOfIco, DWORD pngChunkOffset, DWORD pngChunkSize, DWORD iTXtOffset, DWORD iTXtSize, ICO_FILE_INFO* info);
 	VOID GetSignatureSize(LPBYTE pngChunk, DWORD pngChunkSize, const char* signature, DWORD* signatureSize);
 	BOOL GetSignatureSizeByHandle(HANDLE hFile, DWORD pngChunkOffset, DWORD pngChunkSize);
 	BOOL GetPngChunk(HANDLE hFile, DWORD pngChunkSize, DWORD startPNG, DWORD endPNG, LPBYTE pngChunk);

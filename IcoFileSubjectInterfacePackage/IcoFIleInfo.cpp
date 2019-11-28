@@ -131,6 +131,7 @@ BOOL IcoFileInfo::GetIcoFileInfo(HANDLE hFile, LPCTSTR szFileName, ICO_FILE_INFO
 			info->pngChunkOffset = lpIDE[i].dwImageOffset;
 			info->pngChunkSize = lpIDE[i].dwBytesInRes;
 			UpdateSignaturePosition(lpIR->IconImages[i].lpBits, info->pngChunkSize, info->pngChunkOffset, PNG_SIG_CHUNK_TYPE, info);
+			UpdateITxtTupleList(i, lpIR->IconImages[i].lpBits, info->pngChunkOffset, info->pngChunkSize, PNG_SIG_CHUNK_TYPE, info);
 		}
 		if (dwBytesRead != lpIDE[i].dwBytesInRes)
 		{
@@ -197,7 +198,34 @@ UINT ReadICOHeader(HANDLE hFile)
 	return Input;
 }
 
-BOOL IcoFileInfo::UpdateITxtTupleList(DWORD pngIndex, LPBYTE pngChunk, DWORD* pngChunkSize, DWORD *pngChunkOffset, const char* signature, ICO_FILE_INFO* info)
+BOOL IcoFileInfo::EraseITxtChunk(HANDLE hFile, DWORD pngIndex, DWORD numOfIco, DWORD pngChunkOffset, DWORD pngChunkSize, DWORD iTXtOffset, DWORD iTXtSize, ICO_FILE_INFO* info)
+{
+	DWORD start = iTXtOffset + iTXtSize;
+	MyUtility::MoveBytesFromFileEndToFileLeft(hFile, start, info->fileEndPosition, iTXtSize);
+	MyUtility::ShrinkFile(hFile, iTXtSize);
+	//update fileEndPosition
+	info->fileEndPosition = info->fileEndPosition - iTXtSize;
+	////update header
+	UpdateIcoHeaderByHeaderOffset(hFile, pngIndex, numOfIco , iTXtSize, false);
+	return true;
+}
+
+BOOL IcoFileInfo::EraseAllITxtChunk(HANDLE hFile, ICO_FILE_INFO* info)
+{
+	std::vector<std::tuple<DWORD, DWORD, DWORD, DWORD, DWORD>>& iTXtList = info->iTXtList;
+	for (std::tuple<DWORD, DWORD, DWORD, DWORD, DWORD> iTXt : iTXtList) {
+		DWORD pngIndex = std::get<0>(iTXt);
+		DWORD pngOffset = std::get<1>(iTXt);
+		DWORD pngSize = std::get<2>(iTXt);
+		DWORD iTXtOffset = std::get<3>(iTXt);
+		DWORD iTXtSize = std::get<4>(iTXt);
+
+		EraseITxtChunk(hFile,pngIndex, info->numOfIco, pngOffset, pngSize, iTXtOffset, iTXtSize, info);
+	}
+	return true;
+}
+
+BOOL IcoFileInfo::UpdateITxtTupleList(DWORD pngIndex, LPBYTE pngChunk,  DWORD pngChunkOffset, DWORD pngChunkSize, const char* signature, ICO_FILE_INFO* info)
 {
 	DWORD bytesRead = 0;
 	BYTE buffer[PNG_CHUNK_HEADER_SIZE];
@@ -205,17 +233,15 @@ BOOL IcoFileInfo::UpdateITxtTupleList(DWORD pngIndex, LPBYTE pngChunk, DWORD* pn
 	DWORD sigChunkOffset = 0;
 
 	pngChunkPtr += PNG_CHUNK_HEADER_SIZE;
-	while (pngChunkPtr < *pngChunkSize) {
+	while (pngChunkPtr < pngChunkSize) {
 		memcpy_s(&buffer, PNG_CHUNK_HEADER_SIZE, pngChunk + pngChunkPtr, PNG_CHUNK_HEADER_SIZE);
 		const unsigned int size = buffer[3] | buffer[2] << 8 | buffer[1] << 16 | buffer[0] << 24;
 		const unsigned char* tag = ((const unsigned char*)&buffer[4]);
 		if (0 == memcmp(tag, signature, PNG_TAG_SIZE))
 		{
-			info->sigChunkOffset = *pngChunkOffset + pngChunkPtr;
+			info->sigChunkOffset = pngChunkOffset + pngChunkPtr;
 			info->sigChunkSize = PNG_CHUNK_HEADER_SIZE + size + PNG_CRC_SIZE;
-			std::make_tuple(3.8, 'A', "Lisa Simpson");
-			info->iTXtList.push_back();
-			return true;
+			info->iTXtList.push_back(std::make_tuple(pngIndex, pngChunkOffset, pngChunkSize, info->sigChunkOffset, info->sigChunkSize));
 		}
 		pngChunkPtr += PNG_CHUNK_HEADER_SIZE + size + PNG_CRC_SIZE;
 	}
@@ -264,11 +290,74 @@ VOID GetSignatureSize(LPBYTE pngChunk, DWORD pngChunkSize, const char* signature
 		pngChunkPtr += PNG_CHUNK_HEADER_SIZE + size + PNG_CRC_SIZE;
 	}
 }
+
+BOOL IcoFileInfo::UpdateIcoHeaderByHeaderOffset(HANDLE hFile, DWORD pngIndex, DWORD numOfIco, DWORD updateSize, BOOL IsIncrease)
+{
+	LONG switchFatcor = IsIncrease ? 1 : -1;
+	MyUtility::ResetFilePointer(hFile);
+	//update png header size (little endian by default)
+	BYTE buffer[ICO_SIZE_OF_DATA_SIZE];
+	DWORD bytesRead = 0;
+	DWORD bytesWrite = 0;
+	DWORD pngHeaderSizeOffset = ICO_HEADER_SIZE + pngIndex * ICO_DIRECTORY_CHUNK_SIZE + ICO_OFFSET_OF_DATA_SIZE_IN_HEADER;
+	if (!SetFilePointer(hFile, pngHeaderSizeOffset, NULL, FILE_BEGIN)) {
+		return false;
+	}
+	if (!::ReadFile(hFile, &buffer, ICO_SIZE_OF_DATA_SIZE, &bytesRead, NULL)) {
+		return false;
+	}
+	LONG size = buffer[0] | buffer[1] << 8 | buffer[2] << 16 | buffer[3] << 24;
+	size += ((LONG)updateSize * switchFatcor);
+	//little endian
+	buffer[0] = size & 0xFF;
+	buffer[1] = (size >> 8) & 0xFF;
+	buffer[2] = (size >> 16) & 0xFF;
+	buffer[3] = (size >> 24) & 0xFF;
+	//Update file pointer 
+	if (!SetFilePointer(hFile, -ICO_SIZE_OF_DATA_SIZE, NULL, FILE_CURRENT)) {
+		return false;
+	}
+	//Update current png chunk size
+	if (!::WriteFile(hFile, &buffer, ICO_SIZE_OF_DATA_SIZE, &bytesWrite, NULL)) {
+		return false;
+	}
+	if (!SetFilePointer(hFile, 4, NULL, FILE_CURRENT)) {
+		return false;
+	}
+	//update rest of BMP file offset.
+	INT32 restNumOfBMPFile = numOfIco - (pngIndex + 1);
+	for (int i = 0; i < restNumOfBMPFile; i++) {
+		if (!SetFilePointer(hFile, ICO_PNG_LEFT_OVER_BMP_OFFSET, NULL, FILE_CURRENT)) {
+			return false;
+		}
+		BYTE offsetBuffer[ICO_SIZE_OF_DATA_OFFSET];
+		if (!::ReadFile(hFile, &offsetBuffer, ICO_SIZE_OF_DATA_OFFSET, &bytesRead, NULL)) {
+			return false;
+		}
+		LONG offset = offsetBuffer[0] | offsetBuffer[1] << 8 | offsetBuffer[2] << 16 | offsetBuffer[3] << 24;
+		offset += ((LONG)updateSize * switchFatcor);
+		//little endian
+		buffer[0] = offset & 0xFF;
+		buffer[1] = (offset >> 8) & 0xFF;
+		buffer[2] = (offset >> 16) & 0xFF;
+		buffer[3] = (offset >> 24) & 0xFF;
+		//Update file pointer 
+		if (!SetFilePointer(hFile, -ICO_SIZE_OF_DATA_OFFSET, NULL, FILE_CURRENT)) {
+			return false;
+		}
+		bytesWrite = 0;
+		if (!::WriteFile(hFile, &buffer, ICO_SIZE_OF_DATA_OFFSET, &bytesWrite, NULL)) {
+			return false;
+		}
+	}
+	return true;
+}
 BOOL IcoFileInfo::UpdateIcoHeader(HANDLE hFile, DWORD signatureSize, BOOL IsOriginToUpdate)
 {
 	ICO_FILE_INFO info;
 	IcoFileInfo icoFileInfo;
 	LONG switchFatcor = IsOriginToUpdate ? 1 : -1;
+	DWORD bytesWrite = 0;
 	icoFileInfo.GetIcoFileInfo(hFile, TEXT(""), &info);
 	MyUtility::ResetFilePointer(hFile);
 	DWORD pngHeaderSizeOffset = ICO_HEADER_SIZE + (info.nthImageIsPng - 1) * ICO_DIRECTORY_CHUNK_SIZE + ICO_OFFSET_OF_DATA_SIZE_IN_HEADER;
@@ -293,7 +382,7 @@ BOOL IcoFileInfo::UpdateIcoHeader(HANDLE hFile, DWORD signatureSize, BOOL IsOrig
 	if (!SetFilePointer(hFile, -ICO_SIZE_OF_DATA_SIZE, NULL, FILE_CURRENT)) {
 		return false;
 	}
-	DWORD bytesWrite = 0;
+
 	if (!::WriteFile(hFile, &buffer, ICO_SIZE_OF_DATA_SIZE, &bytesWrite, NULL)) {
 		return false;
 	}
