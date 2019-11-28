@@ -102,7 +102,7 @@ class IcoFileInfo {
 public:
 	BOOL GetIcoFileInfo(HANDLE hFile, LPCTSTR szFileName, ICO_FILE_INFO* info);
 	BOOL UpdateIcoHeader(HANDLE hFile, DWORD signatureSize, BOOL IsOriginToUpdate);
-	BOOL UpdateIcoHeaderByHeaderOffset(HANDLE hFile, DWORD pngIndex, DWORD numOfIco, DWORD updateSize, BOOL IsIncrease);
+	BOOL UpdateIcoHeaderByPngIndex(HANDLE hFile, DWORD pngIndex, DWORD numOfIco, DWORD updateSize, BOOL IsIncrease);
 	BOOL UpdateSignaturePosition(LPBYTE pngChunk, DWORD pngChunkSize, DWORD pngChunkOffset, const char* signature, ICO_FILE_INFO* info);
 	BOOL UpdateITxtTupleList(DWORD pngIndex, LPBYTE pngChunk,  DWORD pngChunkOffset, DWORD pngChunkSize, const char* signature, ICO_FILE_INFO* info);
 	BOOL EraseAllITxtChunk(HANDLE hFile, ICO_FILE_INFO* info);

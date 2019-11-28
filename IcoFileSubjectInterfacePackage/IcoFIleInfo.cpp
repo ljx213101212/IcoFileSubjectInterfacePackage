@@ -206,7 +206,7 @@ BOOL IcoFileInfo::EraseITxtChunk(HANDLE hFile, DWORD pngIndex, DWORD numOfIco, D
 	//update fileEndPosition
 	info->fileEndPosition = info->fileEndPosition - iTXtSize;
 	////update header
-	UpdateIcoHeaderByHeaderOffset(hFile, pngIndex, numOfIco , iTXtSize, false);
+	UpdateIcoHeaderByPngIndex(hFile, pngIndex, numOfIco , iTXtSize, false);
 	return true;
 }
 
@@ -291,7 +291,7 @@ VOID GetSignatureSize(LPBYTE pngChunk, DWORD pngChunkSize, const char* signature
 	}
 }
 
-BOOL IcoFileInfo::UpdateIcoHeaderByHeaderOffset(HANDLE hFile, DWORD pngIndex, DWORD numOfIco, DWORD updateSize, BOOL IsIncrease)
+BOOL IcoFileInfo::UpdateIcoHeaderByPngIndex(HANDLE hFile, DWORD pngIndex, DWORD numOfIco, DWORD updateSize, BOOL IsIncrease)
 {
 	LONG switchFatcor = IsIncrease ? 1 : -1;
 	MyUtility::ResetFilePointer(hFile);
