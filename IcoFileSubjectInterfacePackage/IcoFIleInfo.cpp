@@ -197,6 +197,31 @@ UINT ReadICOHeader(HANDLE hFile)
 	return Input;
 }
 
+BOOL IcoFileInfo::UpdateITxtTupleList(DWORD pngIndex, LPBYTE pngChunk, DWORD* pngChunkSize, DWORD *pngChunkOffset, const char* signature, ICO_FILE_INFO* info)
+{
+	DWORD bytesRead = 0;
+	BYTE buffer[PNG_CHUNK_HEADER_SIZE];
+	DWORD pngChunkPtr = 0;
+	DWORD sigChunkOffset = 0;
+
+	pngChunkPtr += PNG_CHUNK_HEADER_SIZE;
+	while (pngChunkPtr < *pngChunkSize) {
+		memcpy_s(&buffer, PNG_CHUNK_HEADER_SIZE, pngChunk + pngChunkPtr, PNG_CHUNK_HEADER_SIZE);
+		const unsigned int size = buffer[3] | buffer[2] << 8 | buffer[1] << 16 | buffer[0] << 24;
+		const unsigned char* tag = ((const unsigned char*)&buffer[4]);
+		if (0 == memcmp(tag, signature, PNG_TAG_SIZE))
+		{
+			info->sigChunkOffset = *pngChunkOffset + pngChunkPtr;
+			info->sigChunkSize = PNG_CHUNK_HEADER_SIZE + size + PNG_CRC_SIZE;
+			std::make_tuple(3.8, 'A', "Lisa Simpson");
+			info->iTXtList.push_back();
+			return true;
+		}
+		pngChunkPtr += PNG_CHUNK_HEADER_SIZE + size + PNG_CRC_SIZE;
+	}
+	return NULL;
+}
+
 BOOL IcoFileInfo::UpdateSignaturePosition(LPBYTE pngChunk, DWORD pngChunkSize, DWORD pngChunkOffset, const char* signature, ICO_FILE_INFO* info)
 {
 	DWORD bytesRead = 0;

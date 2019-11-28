@@ -18,6 +18,7 @@ typedef struct ICO_FILE_INFO_
 	LONG pngChunkSize;
 	LONG sigChunkOffset;
 	LONG sigChunkSize;
+	std::vector<std::tuple<DWORD, DWORD*, DWORD, DWORD>> iTXtList;
 } ICO_FILE_INFO;
 
 typedef struct
@@ -102,6 +103,7 @@ public:
 	BOOL GetIcoFileInfo(HANDLE hFile, LPCTSTR szFileName, ICO_FILE_INFO* info);
 	BOOL UpdateIcoHeader(HANDLE hFile, DWORD signatureSize, BOOL IsOriginToUpdate);
 	BOOL UpdateSignaturePosition(LPBYTE pngChunk, DWORD pngChunkSize, DWORD pngChunkOffset, const char* signature, ICO_FILE_INFO* info);
+	BOOL UpdateITxtTuple(LPBYTE pngChunk, DWORD pngChunkSize, DWORD pngChunkOffset, const char* signature, ICO_FILE_INFO* info);
 	VOID GetSignatureSize(LPBYTE pngChunk, DWORD pngChunkSize, const char* signature, DWORD* signatureSize);
 	BOOL GetSignatureSizeByHandle(HANDLE hFile, DWORD pngChunkOffset, DWORD pngChunkSize);
 	BOOL GetPngChunk(HANDLE hFile, DWORD pngChunkSize, DWORD startPNG, DWORD endPNG, LPBYTE pngChunk);
