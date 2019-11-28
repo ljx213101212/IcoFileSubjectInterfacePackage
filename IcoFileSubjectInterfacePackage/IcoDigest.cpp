@@ -329,7 +329,7 @@ BOOL PNGSIP_CALL IcoPutDigest(HANDLE hFile, LPCWSTR pwsFileName, DWORD dwSignatu
 	PNGSIP_ERROR_BEGIN;
 	IcoFileInfo info;
 	ICO_FILE_INFO icoFileInfo;
-	LONG pngStartOffset, pngEndOffset, fileEndOffset;
+	LONG pngStartOffset, pngEndOffset, fileEndOffset, sigChunkSize;
 	DWORD pngSize = 0;
 	if (!info.GetIcoFileInfo(hFile, pwsFileName, &icoFileInfo)) {
 		PNGSIP_ERROR_FAIL_LAST_ERROR();
@@ -337,11 +337,30 @@ BOOL PNGSIP_CALL IcoPutDigest(HANDLE hFile, LPCWSTR pwsFileName, DWORD dwSignatu
 	pngStartOffset = icoFileInfo.PNGStartPosition;
 	pngEndOffset = icoFileInfo.afterPNGStartPosition;
 	fileEndOffset = icoFileInfo.fileEndPosition;
+	sigChunkSize = icoFileInfo.sigChunkSize;
 	pngSize = (DWORD)(pngEndOffset - pngStartOffset);
 
-	MyUtility::ExpandFile(hFile, dwSignatureSize + PNG_CHUNK_HEADER_SIZE + PNG_CRC_SIZE);
-	MyUtility::MoveBytesToFileEnd(hFile, pngEndOffset, fileEndOffset,dwSignatureSize + PNG_CHUNK_HEADER_SIZE + PNG_CRC_SIZE);
+	
+	////Not signed before.
+	//if (sigChunkSize == 0) {
+	//	MyUtility::ExpandFile(hFile, dwSignatureSize + PNG_CHUNK_HEADER_SIZE + PNG_CRC_SIZE);
+	//	MyUtility::MoveBytesToFileEnd(hFile, pngEndOffset, fileEndOffset, dwSignatureSize + PNG_CHUNK_HEADER_SIZE + PNG_CRC_SIZE);
+	//	correctedPngEndOffset = pngEndOffset;
+	//}
+	//else if ((LONG)(dwSignatureSize + PNG_CHUNK_HEADER_SIZE + PNG_CRC_SIZE) < sigChunkSize) {
+	//	DWORD diff = sigChunkSize - (dwSignatureSize + PNG_CHUNK_HEADER_SIZE + PNG_CRC_SIZE);
+	//	MyUtility::MoveBytesFromFileEndToFileLeft(hFile, pngEndOffset, fileEndOffset, diff);
+	//	MyUtility::ShrinkFile(hFile, diff);
+	//}
+	//else if ((LONG)(dwSignatureSize + PNG_CHUNK_HEADER_SIZE + PNG_CRC_SIZE) > sigChunkSize) {
+	//	DWORD diff = (dwSignatureSize + PNG_CHUNK_HEADER_SIZE + PNG_CRC_SIZE) - sigChunkSize;
+	//	MyUtility::ExpandFile(hFile, diff);
+	//	MyUtility::MoveBytesToFileEnd(hFile, pngEndOffset, fileEndOffset, diff);
+	//}
+	//when signChunkSize = dwSignatureSize + PNG_CHUNK_HEADER_SIZE + PNG_CRC_SIZE, don't change file structure.
 
+	MyUtility::ExpandFile(hFile, dwSignatureSize + PNG_CHUNK_HEADER_SIZE + PNG_CRC_SIZE);
+	MyUtility::MoveBytesToFileEnd(hFile, pngEndOffset, fileEndOffset, dwSignatureSize + PNG_CHUNK_HEADER_SIZE + PNG_CRC_SIZE);
 	if (SetFilePointer(hFile, pngEndOffset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
 	{
 		PNGSIP_ERROR_FAIL(ERROR_BAD_FORMAT);

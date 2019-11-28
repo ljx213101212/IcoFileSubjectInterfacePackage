@@ -70,4 +70,60 @@ namespace MyUtility {
 
 		return true;
 	}
+
+	BOOL MoveBytesFromFileEndToFileLeft(HANDLE hFile, DWORD start, DWORD end, DWORD moveSize)
+	{
+		LONG needToMoveTotal = abs((LONG)(end - start));
+		LONG movedTotal = 0;
+		BYTE buffer[CHUNK_SIZE];
+		DWORD bytesRead = 0;
+		DWORD bytesWrite = 0;
+		while ((needToMoveTotal - movedTotal) >= CHUNK_SIZE) {
+			if (SetFilePointer(hFile, - (CHUNK_SIZE + movedTotal), NULL, FILE_END) == 0xFFFFFFFF) 
+			{ 
+				return NULL; 
+			}
+			if (!::ReadFile(hFile, &buffer, CHUNK_SIZE, &bytesRead, NULL)) {
+				return NULL;
+			}
+
+
+			if (SetFilePointer(hFile, -(CHUNK_SIZE + movedTotal + (LONG)moveSize), NULL, FILE_END) == 0xFFFFFFFF)
+			{
+				return NULL;
+			}
+			if (!::WriteFile(hFile, &buffer, CHUNK_SIZE, &bytesWrite, NULL)) {
+				return NULL;
+			}
+			movedTotal += CHUNK_SIZE;
+		}
+		//Process residue
+		if (needToMoveTotal - movedTotal > 0) {
+			if (SetFilePointer(hFile, -((LONG)moveSize + needToMoveTotal), NULL, FILE_END) == 0xFFFFFFFF)
+			{
+				return NULL;
+			}
+			if (!::ReadFile(hFile, &buffer, (needToMoveTotal - movedTotal), &bytesRead, NULL)) {
+				return NULL;
+			}
+			if (SetFilePointer(hFile, -((LONG)moveSize + needToMoveTotal), NULL, FILE_END) == 0xFFFFFFFF)
+			{
+				return NULL;
+			}
+			if (!::WriteFile(hFile, &buffer, (needToMoveTotal - movedTotal), &bytesWrite, NULL)) {
+				return NULL;
+			}
+		}
+		movedTotal += (needToMoveTotal - movedTotal);
+		if (movedTotal != needToMoveTotal) { return NULL; }
+		return true;
+	}
+
+	void ShrinkFile(HANDLE hFile, DWORD reduceSize) {
+		if (SetFilePointer(hFile, -(LONG)reduceSize, NULL, FILE_END) == 0xFFFFFFFF)
+		{
+			return;
+		}
+		SetEndOfFile(hFile);
+	}
 };
