@@ -257,7 +257,6 @@ BOOL WINAPI IcoCryptSIPVerifyIndirectData(SIP_SUBJECTINFO* pSubjectInfo, SIP_IND
 	//
 	IcoFileInfo icoInfo;
 	ICO_FILE_INFO icoFileInfo;
-	icoInfo.UpdateIcoHeader(pSubjectInfo->hFile, PNG_CHUNK_HEADER_SIZE +  0x825 + PNG_CRC_SIZE, false);
 	icoInfo.GetIcoFileInfo(pSubjectInfo->hFile, pSubjectInfo->pwsFileName, &icoFileInfo);
 	if (!IcoDigestChunks(pSubjectInfo->hFile, hHashHandle, dwHashSize,
 		icoFileInfo.beforePNGStartPosition,
@@ -267,17 +266,14 @@ BOOL WINAPI IcoCryptSIPVerifyIndirectData(SIP_SUBJECTINFO* pSubjectInfo, SIP_IND
 		SignToolProcess::verify,
 		&digestBuffer[0], &error))
 	{
-		icoInfo.UpdateIcoHeader(pSubjectInfo->hFile, PNG_CHUNK_HEADER_SIZE + 0x825 + PNG_CRC_SIZE, true);
 		PNGSIP_ERROR_FAIL(error);
 	}
 	if (0 == memcmp(&digestBuffer, pIndirectData->Digest.pbData, dwHashSize))
 	{
-		icoInfo.UpdateIcoHeader(pSubjectInfo->hFile, PNG_CHUNK_HEADER_SIZE + 0x825 + PNG_CRC_SIZE, true);
 		PNGSIP_ERROR_SUCCESS();
 	}
 	else
 	{
-		icoInfo.UpdateIcoHeader(pSubjectInfo->hFile, PNG_CHUNK_HEADER_SIZE + 0x825 + PNG_CRC_SIZE, true);
 		PNGSIP_ERROR_FAIL(TRUST_E_SUBJECT_NOT_TRUSTED);
 	}
 

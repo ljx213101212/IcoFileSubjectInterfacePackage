@@ -2,7 +2,7 @@
 #include "IcoFileInfo.h"
 #include "FileUtil.h"
 
-#define BUFFER_SIZE 0x20000
+#define BUFFER_SIZE 0x10000
 
 //Declaration of methods. 
 UINT ReadICOHeader(HANDLE hFile);
@@ -200,7 +200,7 @@ UINT ReadICOHeader(HANDLE hFile)
 BOOL IcoFileInfo::UpdateSignaturePosition(LPBYTE pngChunk, DWORD pngChunkSize, DWORD pngChunkOffset, const char* signature, ICO_FILE_INFO* info)
 {
 	DWORD bytesRead = 0;
-	BYTE buffer[BUFFER_SIZE];
+	BYTE buffer[PNG_CHUNK_HEADER_SIZE];
 	DWORD pngChunkPtr = 0;
 	DWORD sigChunkOffset = 0;
 
@@ -215,6 +215,7 @@ BOOL IcoFileInfo::UpdateSignaturePosition(LPBYTE pngChunk, DWORD pngChunkSize, D
 			info->sigChunkSize = PNG_CHUNK_HEADER_SIZE + size + PNG_CRC_SIZE;
 			return true;
 		}
+		pngChunkPtr += PNG_CHUNK_HEADER_SIZE + size + PNG_CRC_SIZE;
 	}
 	return NULL;
 }
@@ -222,7 +223,7 @@ BOOL IcoFileInfo::UpdateSignaturePosition(LPBYTE pngChunk, DWORD pngChunkSize, D
 VOID GetSignatureSize(LPBYTE pngChunk, DWORD pngChunkSize, const char* signature, DWORD* signatureSize) 
 {
 	DWORD bytesRead = 0;
-	BYTE buffer[BUFFER_SIZE];
+	BYTE buffer[PNG_CHUNK_HEADER_SIZE];
 	DWORD pngChunkPtr = 0;
 
 	pngChunkPtr += PNG_CHUNK_HEADER_SIZE;

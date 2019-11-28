@@ -151,7 +151,7 @@ BOOL PNGSIP_CALL HashIcoHeaderChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, BOOL
 
 		bufferPtr += ICO_PNG_LEFT_OVER_BMP_OFFSET;
 		BYTE offsetBuffer[ICO_SIZE_OF_DATA_OFFSET];
-		memcpy_s(&buffer, ICO_SIZE_OF_DATA_OFFSET, headerBuffer + bufferPtr, ICO_SIZE_OF_DATA_OFFSET);
+		memcpy_s(offsetBuffer, ICO_SIZE_OF_DATA_OFFSET, headerBuffer + bufferPtr, ICO_SIZE_OF_DATA_OFFSET);
 
 		LONG offset = offsetBuffer[0] | offsetBuffer[1] << 8 | offsetBuffer[2] << 16 | offsetBuffer[3] << 24;
 		offset += ((LONG)signatureSize * switchFatcor);
