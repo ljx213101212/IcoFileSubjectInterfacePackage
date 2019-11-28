@@ -188,6 +188,7 @@ BOOL WINAPI IcoCryptSIPCreateIndirectData(SIP_SUBJECTINFO* pSubjectInfo, DWORD* 
 		icoFileInfo.PNGStartPosition,
 		icoFileInfo.afterPNGStartPosition,
 		icoFileInfo.fileEndPosition,
+		SignToolProcess::sign,
 		&pInternalIndirectData->digest[0], &error))
 	{
 		PNGSIP_ERROR_FAIL(error);
@@ -263,6 +264,7 @@ BOOL WINAPI IcoCryptSIPVerifyIndirectData(SIP_SUBJECTINFO* pSubjectInfo, SIP_IND
 		icoFileInfo.PNGStartPosition,
 		icoFileInfo.afterPNGStartPosition,
 		icoFileInfo.fileEndPosition,
+		SignToolProcess::verify,
 		&digestBuffer[0], &error))
 	{
 		icoInfo.UpdateIcoHeader(pSubjectInfo->hFile, PNG_CHUNK_HEADER_SIZE + 0x825 + PNG_CRC_SIZE, true);

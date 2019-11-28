@@ -69,7 +69,9 @@ DWORD GetAfterPNGSize(LONG afterPNGStartPosition, LONG fileEndPosition) {
 
 BOOL PNGSIP_CALL IcoDigestChunks(HANDLE hFile, BCRYPT_HASH_HANDLE hHashHandle,
 	DWORD digestSize, LONG beforePNGStartPosition,  
-	LONG PNGStartPosition,  LONG afterPNGStartPosition, LONG fileEndPosition, PBYTE pBuffer, DWORD* error)
+	LONG PNGStartPosition,  LONG afterPNGStartPosition, LONG fileEndPosition,
+	SignToolProcess process,
+	PBYTE pBuffer, DWORD* error)
 {
 	PNGSIP_ERROR_BEGIN;
 	if (hFile == INVALID_HANDLE_VALUE)
@@ -83,9 +85,17 @@ BOOL PNGSIP_CALL IcoDigestChunks(HANDLE hFile, BCRYPT_HASH_HANDLE hHashHandle,
 
 	DWORD result;
 	//Hash Before PNG Chunk.
-	if (!HashCustomChunk(hFile, hHashHandle, GetBeforePNGSize(PNGStartPosition, beforePNGStartPosition), &result)) {
-		PNGSIP_ERROR_FAIL(result);
+	if (process == SignToolProcess::verify) {
+		if (!HashIcoHeaderChunk(hFile, hHashHandle, false, &result)) {
+			PNGSIP_ERROR_FAIL(result);
+		}
 	}
+	else {
+		if (!HashCustomChunk(hFile, hHashHandle, GetBeforePNGSize(PNGStartPosition, beforePNGStartPosition), &result)) {
+			PNGSIP_ERROR_FAIL(result);
+		}
+	}
+	
 	//Hash PNG Chunk.
 	if (!HashPNGChunk(hFile, hHashHandle, PNGStartPosition, GetPNGSize(PNGStartPosition, afterPNGStartPosition), &result)) {
 		PNGSIP_ERROR_FAIL(result);
@@ -105,7 +115,7 @@ BOOL PNGSIP_CALL IcoDigestChunks(HANDLE hFile, BCRYPT_HASH_HANDLE hHashHandle,
 	PNGSIP_ERROR_FINISH_END_CLEANUP;
 }
 
-BOOL PNGSIP_CALL HashIcoHeaderChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, DWORD chunkSize, BOOL isOriginToUpdate, DWORD* error) {
+BOOL PNGSIP_CALL HashIcoHeaderChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, BOOL isOriginToUpdate, DWORD* error) {
 
 	PNGSIP_ERROR_BEGIN;
 	BYTE headerBuffer[BUFFER_SIZE];
@@ -118,81 +128,47 @@ BOOL PNGSIP_CALL HashIcoHeaderChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, DWOR
 	icoFileInfo.GetIcoFileInfo(hFile, TEXT(""), &info);
 	DWORD pngHeaderSizeOffset = ICO_HEADER_SIZE + (info.nthImageIsPng - 1) * ICO_DIRECTORY_CHUNK_SIZE + ICO_OFFSET_OF_DATA_SIZE_IN_HEADER;
 	DWORD icoHeaderOffset = ICO_HEADER_SIZE + info.numOfIco * ICO_DIRECTORY_CHUNK_SIZE;
+	DWORD signatureSize = info.sigChunkSize;
 	/*DWORD signatureSize = icoFileInfo.GetSignatureSize();*/
 	MyUtility::ResetFilePointer(hFile);
-	if (!::ReadFile(hFile, &headerBuffer, icoHeaderOffset, &bytesRead, NULL)) {
+	if (!::ReadFile(hFile, headerBuffer, icoHeaderOffset, &bytesRead, NULL)) {
 		return false;
 	}
-
 	bufferPtr += pngHeaderSizeOffset;
-	while (bufferPtr < icoHeaderOffset) {
-		memcpy_s(&buffer, ICO_SIZE_OF_DATA_SIZE, &bytesRead, NULL);
-		LONG size = buffer[0] | buffer[1] << 8 | buffer[2] << 16 | buffer[3] << 24;
-		size += ((LONG)signatureSize * switchFatcor);
-	}
-	
-
-	//ICO_FILE_INFO info;
-	//LONG switchFatcor = IsOriginToUpdate ? 1 : -1;
-	//ReadIconFromICOFile(hFile, TEXT(""), info);
-	//ResetFilePointer(hFile);
-	//DWORD pngHeaderSizeOffset = ICO_HEADER_SIZE + (info.nthImageIsPng - 1) * ICO_DIRECTORY_CHUNK_SIZE + ICO_OFFSET_OF_DATA_SIZE_IN_HEADER;
-	//if (!SetFilePointer(hFile, pngHeaderSizeOffset, NULL, FILE_BEGIN)) {
-	//	return false;
-	//}
-	////update png header size (little endian by default)
-	//BYTE buffer[ICO_SIZE_OF_DATA_SIZE];
-	//DWORD bytesRead = 0;
-	//if (!::ReadFile(hFile, &buffer, ICO_SIZE_OF_DATA_SIZE, &bytesRead, NULL)) {
-	//	return false;
-	//}
-	//LONG size = buffer[0] | buffer[1] << 8 | buffer[2] << 16 | buffer[3] << 24;
-	//size += ((LONG)signatureSize * switchFatcor);
+	memcpy_s(buffer, ICO_SIZE_OF_DATA_SIZE, headerBuffer + bufferPtr, ICO_SIZE_OF_DATA_SIZE);
+	LONG size = buffer[0] | buffer[1] << 8 | buffer[2] << 16 | buffer[3] << 24;
+	size += ((LONG)signatureSize * switchFatcor);
 	////little endian
-	//buffer[0] = size & 0xFF;
-	//buffer[1] = (size >> 8) & 0xFF;
-	//buffer[2] = (size >> 16) & 0xFF;
-	//buffer[3] = (size >> 24) & 0xFF;
+	buffer[0] = size & 0xFF;
+	buffer[1] = (size >> 8) & 0xFF;
+	buffer[2] = (size >> 16) & 0xFF;
+	buffer[3] = (size >> 24) & 0xFF;
+	memcpy_s(headerBuffer + bufferPtr, ICO_SIZE_OF_DATA_SIZE, buffer, ICO_SIZE_OF_DATA_SIZE);
 
-	////Update file pointer 
-	//if (!SetFilePointer(hFile, -ICO_SIZE_OF_DATA_SIZE, NULL, FILE_CURRENT)) {
-	//	return false;
-	//}
-	//DWORD bytesWrite = 0;
-	//if (!::WriteFile(hFile, &buffer, ICO_SIZE_OF_DATA_SIZE, &bytesWrite, NULL)) {
-	//	return false;
-	//}
+	bufferPtr += (ICO_SIZE_OF_DATA_SIZE + ICO_SIZE_OF_DATA_OFFSET);
+	INT32 restNumOfBMPFile = info.numOfIco - info.nthImageIsPng;
+	for (int i = 0; i < restNumOfBMPFile; i++) {
 
-	//if (!SetFilePointer(hFile, 4, NULL, FILE_CURRENT)) {
-	//	return false;
-	//}
-	////update rest of BMP file offset.
-	//INT32 restNumOfBMPFile = info.numOfIco - info.nthImageIsPng;
-	//for (int i = 0; i < restNumOfBMPFile; i++) {
-	//	if (!SetFilePointer(hFile, ICO_PNG_LEFT_OVER_BMP_OFFSET, NULL, FILE_CURRENT)) {
-	//		return false;
-	//	}
-	//	BYTE offsetBuffer[ICO_SIZE_OF_DATA_OFFSET];
-	//	if (!::ReadFile(hFile, &offsetBuffer, ICO_SIZE_OF_DATA_OFFSET, &bytesRead, NULL)) {
-	//		return false;
-	//	}
-	//	LONG offset = offsetBuffer[0] | offsetBuffer[1] << 8 | offsetBuffer[2] << 16 | offsetBuffer[3] << 24;
-	//	offset += ((LONG)signatureSize * switchFatcor);
-	//	//little endian
-	//	buffer[0] = offset & 0xFF;
-	//	buffer[1] = (offset >> 8) & 0xFF;
-	//	buffer[2] = (offset >> 16) & 0xFF;
-	//	buffer[3] = (offset >> 24) & 0xFF;
-	//	//Update file pointer 
-	//	if (!SetFilePointer(hFile, -ICO_SIZE_OF_DATA_OFFSET, NULL, FILE_CURRENT)) {
-	//		return false;
-	//	}
-	//	bytesWrite = 0;
-	//	if (!::WriteFile(hFile, &buffer, ICO_SIZE_OF_DATA_OFFSET, &bytesWrite, NULL)) {
-	//		return false;
-	//	}
-	//}
+		bufferPtr += ICO_PNG_LEFT_OVER_BMP_OFFSET;
+		BYTE offsetBuffer[ICO_SIZE_OF_DATA_OFFSET];
+		memcpy_s(&buffer, ICO_SIZE_OF_DATA_OFFSET, headerBuffer + bufferPtr, ICO_SIZE_OF_DATA_OFFSET);
 
+		LONG offset = offsetBuffer[0] | offsetBuffer[1] << 8 | offsetBuffer[2] << 16 | offsetBuffer[3] << 24;
+		offset += ((LONG)signatureSize * switchFatcor);
+		//little endian
+		buffer[0] = offset & 0xFF;
+		buffer[1] = (offset >> 8) & 0xFF;
+		buffer[2] = (offset >> 16) & 0xFF;
+		buffer[3] = (offset >> 24) & 0xFF;
+
+		memcpy_s(headerBuffer + bufferPtr, ICO_SIZE_OF_DATA_OFFSET, buffer, ICO_SIZE_OF_DATA_OFFSET);
+		bufferPtr += ICO_SIZE_OF_DATA_OFFSET;
+	}
+
+	if (!BCRYPT_SUCCESS(BCryptHashData(hHash, headerBuffer, bytesRead, 0)))
+	{
+		PNGSIP_ERROR_FAIL(ERROR_INVALID_OPERATION);
+	}
 	PNGSIP_ERROR_SUCCESS();
 	PNGSIP_ERROR_FINISH_BEGIN_CLEANUP_TRANSFER(*error);
 	PNGSIP_ERROR_FINISH_END_CLEANUP;

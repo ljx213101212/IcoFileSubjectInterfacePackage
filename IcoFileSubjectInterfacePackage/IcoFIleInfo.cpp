@@ -128,6 +128,9 @@ BOOL IcoFileInfo::GetIcoFileInfo(HANDLE hFile, LPCTSTR szFileName, ICO_FILE_INFO
 			info->PNGStartPosition = info->afterPNGStartPosition - dwBytesRead;
 			info->nthImageIsPng = i + 1;
 			info->numOfIco = lpIR->nNumImages;
+			info->pngChunkOffset = lpIDE[i].dwImageOffset;
+			info->pngChunkSize = lpIDE[i].dwBytesInRes;
+			UpdateSignaturePosition(lpIR->IconImages[i].lpBits, info->pngChunkSize, info->pngChunkOffset, PNG_SIG_CHUNK_TYPE, info);
 		}
 		if (dwBytesRead != lpIDE[i].dwBytesInRes)
 		{
@@ -192,6 +195,28 @@ UINT ReadICOHeader(HANDLE hFile)
 		return (UINT)-1;
 	// Return the count
 	return Input;
+}
+
+BOOL IcoFileInfo::UpdateSignaturePosition(LPBYTE pngChunk, DWORD pngChunkSize, DWORD pngChunkOffset, const char* signature, ICO_FILE_INFO* info)
+{
+	DWORD bytesRead = 0;
+	BYTE buffer[BUFFER_SIZE];
+	DWORD pngChunkPtr = 0;
+	DWORD sigChunkOffset = 0;
+
+	pngChunkPtr += PNG_CHUNK_HEADER_SIZE;
+	while (pngChunkPtr < pngChunkSize) {
+		memcpy_s(&buffer, PNG_CHUNK_HEADER_SIZE, pngChunk + pngChunkPtr, PNG_CHUNK_HEADER_SIZE);
+		const unsigned int size = buffer[3] | buffer[2] << 8 | buffer[1] << 16 | buffer[0] << 24;
+		const unsigned char* tag = ((const unsigned char*)&buffer[4]);
+		if (0 == memcmp(tag, signature, PNG_TAG_SIZE))
+		{
+			info->sigChunkOffset = pngChunkOffset + pngChunkPtr;
+			info->sigChunkSize = PNG_CHUNK_HEADER_SIZE + size + PNG_CRC_SIZE;
+			return true;
+		}
+	}
+	return NULL;
 }
 
 VOID GetSignatureSize(LPBYTE pngChunk, DWORD pngChunkSize, const char* signature, DWORD* signatureSize) 
@@ -336,4 +361,21 @@ WORD PaletteSize(LPSTR lpbi)
 DWORD BytesPerLine(LPBITMAPINFOHEADER lpBMIH)
 {
 	return WIDTHBYTES(lpBMIH->biWidth * lpBMIH->biPlanes * lpBMIH->biBitCount);
+}
+
+
+
+BOOL GetPngChunk(HANDLE hFile, DWORD pngChunkSize, DWORD startPNG, DWORD endPNG, LPBYTE pngChunk) 
+{
+	//check
+	DWORD t_pngChunkSize = endPNG - startPNG;
+	if (t_pngChunkSize != pngChunkSize) { return NULL; }
+
+	MyUtility::ResetFilePointer(hFile);
+	SetFilePointer(hFile, startPNG, NULL, FILE_BEGIN);
+	DWORD dwBytesRead = 0;
+	if (!ReadFile(hFile, pngChunk, pngChunkSize, &dwBytesRead, NULL)) {
+		return NULL;
+	}
+	return true;
 }
