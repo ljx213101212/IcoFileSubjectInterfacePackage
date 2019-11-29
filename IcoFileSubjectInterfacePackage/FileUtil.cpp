@@ -79,16 +79,14 @@ namespace MyUtility {
 		DWORD bytesRead = 0;
 		DWORD bytesWrite = 0;
 		while ((needToMoveTotal - movedTotal) >= CHUNK_SIZE) {
-			if (SetFilePointer(hFile, - (CHUNK_SIZE + movedTotal), NULL, FILE_END) == 0xFFFFFFFF) 
+			if (SetFilePointer(hFile, movedTotal + start, NULL, FILE_BEGIN) == 0xFFFFFFFF)
 			{ 
 				return NULL; 
 			}
 			if (!::ReadFile(hFile, &buffer, CHUNK_SIZE, &bytesRead, NULL)) {
 				return NULL;
 			}
-
-
-			if (SetFilePointer(hFile, -(CHUNK_SIZE + movedTotal + (LONG)moveSize), NULL, FILE_END) == 0xFFFFFFFF)
+			if (SetFilePointer(hFile, movedTotal + start - (LONG)moveSize, NULL, FILE_BEGIN) == 0xFFFFFFFF)
 			{
 				return NULL;
 			}
@@ -99,14 +97,14 @@ namespace MyUtility {
 		}
 		//Process residue
 		if (needToMoveTotal - movedTotal > 0) {
-			if (SetFilePointer(hFile, -((LONG)moveSize + needToMoveTotal), NULL, FILE_END) == 0xFFFFFFFF)
+			if (SetFilePointer(hFile, movedTotal + start, NULL, FILE_BEGIN) == 0xFFFFFFFF)
 			{
 				return NULL;
 			}
 			if (!::ReadFile(hFile, &buffer, (needToMoveTotal - movedTotal), &bytesRead, NULL)) {
 				return NULL;
 			}
-			if (SetFilePointer(hFile, -((LONG)moveSize + needToMoveTotal), NULL, FILE_END) == 0xFFFFFFFF)
+			if (SetFilePointer(hFile,  movedTotal + start - (LONG)moveSize, NULL, FILE_BEGIN) == 0xFFFFFFFF)
 			{
 				return NULL;
 			}

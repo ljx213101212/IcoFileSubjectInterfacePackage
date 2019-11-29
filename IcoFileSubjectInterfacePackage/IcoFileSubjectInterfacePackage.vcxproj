@@ -72,6 +72,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <TargetName>icosip</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -99,6 +100,17 @@
       <ModuleDefinitionFile>IcoSIP.def</ModuleDefinitionFile>
       <AdditionalDependencies>crypt32.lib;bcrypt.lib;ncrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>copy /Y "D:\\SourceCodeTest\\Cryptography\\IcoFileSubjectInterfacePackage\\Debug\\$(TargetName).dll" "C:\\Windows\\SysWOW64\\$(TargetName).dll"
+copy /Y "D:\\SourceCodeTest\\Cryptography\\IcoFileSubjectInterfacePackage\\Debug\\$(TargetName).exp" "C:\\Windows\\SysWOW64\\$(TargetName).exp"
+copy /Y "D:\\SourceCodeTest\\Cryptography\\IcoFileSubjectInterfacePackage\\Debug\\$(TargetName).ilk" "C:\\Windows\\SysWOW64\\$(TargetName).ilk"
+copy /Y "D:\\SourceCodeTest\\Cryptography\\IcoFileSubjectInterfacePackage\\Debug\\$(TargetName).lib" "C:\\Windows\\SysWOW64\\$(TargetName).lib"
+copy /Y "D:\\SourceCodeTest\\Cryptography\\IcoFileSubjectInterfacePackage\\Debug\\$(TargetName).pdb" "C:\\Windows\\SysWOW64\\$(TargetName).pdb"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>

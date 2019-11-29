@@ -17,6 +17,7 @@
 #define PNG_CHUNK_HEADER_SIZE 8
 #define PNG_CRC_SIZE 4
 #define PNG_TAG_SIZE 4
+#define PNG_IEND_TAG_SIZE 12
 
 #define PNG_SIG_SIZE 8
 #define ICO_SIZE_OF_DATA_SIZE 4

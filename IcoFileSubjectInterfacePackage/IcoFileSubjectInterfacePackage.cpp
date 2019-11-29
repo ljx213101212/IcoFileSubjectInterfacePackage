@@ -181,6 +181,8 @@ BOOL WINAPI IcoCryptSIPCreateIndirectData(SIP_SUBJECTINFO* pSubjectInfo, DWORD* 
 
 	memset(pInternalIndirectData, 0, sizeof(INTERNAL_SIP_INDIRECT_DATA));
 	icoInfo.GetIcoFileInfo(pSubjectInfo->hFile, pSubjectInfo->pwsFileName, &icoFileInfo);
+	// Clean the iTxt data.
+	icoInfo.EraseAllITxtChunk(pSubjectInfo->hFile, &icoFileInfo);
 	if (!IcoDigestChunks(pSubjectInfo->hFile, hHashHandle, dwHashSize,
 		icoFileInfo.beforePNGStartPosition,
 		icoFileInfo.PNGStartPosition,

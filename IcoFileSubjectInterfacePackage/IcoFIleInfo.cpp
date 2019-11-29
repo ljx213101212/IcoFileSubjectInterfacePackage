@@ -201,7 +201,8 @@ UINT ReadICOHeader(HANDLE hFile)
 BOOL IcoFileInfo::EraseITxtChunk(HANDLE hFile, DWORD pngIndex, DWORD numOfIco, DWORD pngChunkOffset, DWORD pngChunkSize, DWORD iTXtOffset, DWORD iTXtSize, ICO_FILE_INFO* info)
 {
 	DWORD start = iTXtOffset + iTXtSize;
-	MyUtility::MoveBytesFromFileEndToFileLeft(hFile, start, info->fileEndPosition, iTXtSize);
+	DWORD end = info->fileEndPosition;
+	MyUtility::MoveBytesFromFileEndToFileLeft(hFile, start, end, iTXtSize);
 	MyUtility::ShrinkFile(hFile, iTXtSize);
 	//update fileEndPosition
 	info->fileEndPosition = info->fileEndPosition - iTXtSize;
