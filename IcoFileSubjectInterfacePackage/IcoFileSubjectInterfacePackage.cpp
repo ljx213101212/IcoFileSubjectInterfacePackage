@@ -130,13 +130,17 @@ BOOL WINAPI IcoCryptSIPCreateIndirectData(SIP_SUBJECTINFO* pSubjectInfo, DWORD* 
 	allocdAlgorithm = TRUE;
 	BCRYPT_HASH_HANDLE hHashHandle = { 0 };
 	allocdHashHandle = TRUE;
-	DWORD dwHashSize = 0, cbHashSize = sizeof(DWORD);
+	DWORD dwHashSize = 0, cbHashSize = sizeof(DWORD);	
+	IcoFileInfo icoInfo;
+	ICO_FILE_INFO icoFileInfo;
+	icoInfo.GetIcoFileInfo(pSubjectInfo->hFile, pSubjectInfo->pwsFileName, &icoFileInfo);
+	// Clean the iTxt data.
+	icoInfo.EraseAllITxtChunk(pSubjectInfo->hFile, &icoFileInfo);
 	PCCRYPT_OID_INFO info = CryptFindOIDInfo(CRYPT_OID_INFO_OID_KEY, pSubjectInfo->DigestAlgorithm.pszObjId, CRYPT_HASH_ALG_OID_GROUP_ID);
 	size_t oidLen = strlen(pSubjectInfo->DigestAlgorithm.pszObjId) + sizeof(CHAR);
 	INTERNAL_SIP_INDIRECT_DATA* pInternalIndirectData = (INTERNAL_SIP_INDIRECT_DATA*)pIndirectData;
 	DWORD error;
-	IcoFileInfo icoInfo;
-	ICO_FILE_INFO icoFileInfo;
+
 
 	if (pSubjectInfo == NULL || pcbIndirectData == NULL)
 	{
@@ -180,9 +184,7 @@ BOOL WINAPI IcoCryptSIPCreateIndirectData(SIP_SUBJECTINFO* pSubjectInfo, DWORD* 
 	//We checked the size earlier above.
 
 	memset(pInternalIndirectData, 0, sizeof(INTERNAL_SIP_INDIRECT_DATA));
-	icoInfo.GetIcoFileInfo(pSubjectInfo->hFile, pSubjectInfo->pwsFileName, &icoFileInfo);
-	// Clean the iTxt data.
-	icoInfo.EraseAllITxtChunk(pSubjectInfo->hFile, &icoFileInfo);
+	
 	if (!IcoDigestChunks(pSubjectInfo->hFile, hHashHandle, dwHashSize,
 		icoFileInfo.beforePNGStartPosition,
 		icoFileInfo.PNGStartPosition,

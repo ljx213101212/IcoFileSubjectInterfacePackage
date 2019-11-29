@@ -86,12 +86,12 @@ BOOL PNGSIP_CALL IcoDigestChunks(HANDLE hFile, BCRYPT_HASH_HANDLE hHashHandle,
 	DWORD result;
 	//Hash Before PNG Chunk.
 	if (process == SignToolProcess::verify) {
-		if (!HashIcoHeaderChunk(hFile, hHashHandle, false, &result)) {
+		if (!HashIcoHeaderChunk(hFile, hHashHandle, beforePNGStartPosition, false, &result)) {
 			PNGSIP_ERROR_FAIL(result);
 		}
 	}
 	else {
-		if (!HashCustomChunk(hFile, hHashHandle, GetBeforePNGSize(PNGStartPosition, beforePNGStartPosition), &result)) {
+		if (!HashCustomChunk(hFile, hHashHandle, beforePNGStartPosition, GetBeforePNGSize(PNGStartPosition, beforePNGStartPosition), &result)) {
 			PNGSIP_ERROR_FAIL(result);
 		}
 	}
@@ -101,7 +101,7 @@ BOOL PNGSIP_CALL IcoDigestChunks(HANDLE hFile, BCRYPT_HASH_HANDLE hHashHandle,
 		PNGSIP_ERROR_FAIL(result);
 	}
 	////Hash After PNG Chunk.
-	if (!HashCustomChunk(hFile, hHashHandle, GetAfterPNGSize(afterPNGStartPosition, fileEndPosition), &result)) {
+	if (!HashCustomChunk(hFile, hHashHandle, afterPNGStartPosition, GetAfterPNGSize(afterPNGStartPosition, fileEndPosition), &result)) {
 		PNGSIP_ERROR_FAIL(result);
 	}
 
@@ -115,7 +115,7 @@ BOOL PNGSIP_CALL IcoDigestChunks(HANDLE hFile, BCRYPT_HASH_HANDLE hHashHandle,
 	PNGSIP_ERROR_FINISH_END_CLEANUP;
 }
 
-BOOL PNGSIP_CALL HashIcoHeaderChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, BOOL isOriginToUpdate, DWORD* error) {
+BOOL PNGSIP_CALL HashIcoHeaderChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, LONG chunkStartOffset,  BOOL isOriginToUpdate, DWORD* error) {
 
 	PNGSIP_ERROR_BEGIN;
 	BYTE headerBuffer[BUFFER_SIZE];
@@ -129,14 +129,20 @@ BOOL PNGSIP_CALL HashIcoHeaderChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, BOOL
 	DWORD pngHeaderSizeOffset = ICO_HEADER_SIZE + (info.nthImageIsPng - 1) * ICO_DIRECTORY_CHUNK_SIZE + ICO_OFFSET_OF_DATA_SIZE_IN_HEADER;
 	DWORD icoHeaderOffset = ICO_HEADER_SIZE + info.numOfIco * ICO_DIRECTORY_CHUNK_SIZE;
 	DWORD signatureSize = info.sigChunkSize;
+	LONG size = 0;
+	INT32 restNumOfBMPFile = 0;
 	/*DWORD signatureSize = icoFileInfo.GetSignatureSize();*/
-	MyUtility::ResetFilePointer(hFile);
+	//update file pointer
+	if (SetFilePointer(hFile, chunkStartOffset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
+	{
+		PNGSIP_ERROR_FAIL(ERROR_BAD_FORMAT);
+	}
 	if (!::ReadFile(hFile, headerBuffer, icoHeaderOffset, &bytesRead, NULL)) {
 		return false;
 	}
 	bufferPtr += pngHeaderSizeOffset;
 	memcpy_s(buffer, ICO_SIZE_OF_DATA_SIZE, headerBuffer + bufferPtr, ICO_SIZE_OF_DATA_SIZE);
-	LONG size = buffer[0] | buffer[1] << 8 | buffer[2] << 16 | buffer[3] << 24;
+	size = buffer[0] | buffer[1] << 8 | buffer[2] << 16 | buffer[3] << 24;
 	size += ((LONG)signatureSize * switchFatcor);
 	////little endian
 	buffer[0] = size & 0xFF;
@@ -146,7 +152,7 @@ BOOL PNGSIP_CALL HashIcoHeaderChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, BOOL
 	memcpy_s(headerBuffer + bufferPtr, ICO_SIZE_OF_DATA_SIZE, buffer, ICO_SIZE_OF_DATA_SIZE);
 
 	bufferPtr += (ICO_SIZE_OF_DATA_SIZE + ICO_SIZE_OF_DATA_OFFSET);
-	INT32 restNumOfBMPFile = info.numOfIco - info.nthImageIsPng;
+	restNumOfBMPFile = info.numOfIco - info.nthImageIsPng;
 	for (int i = 0; i < restNumOfBMPFile; i++) {
 
 		bufferPtr += ICO_PNG_LEFT_OVER_BMP_OFFSET;
@@ -174,11 +180,18 @@ BOOL PNGSIP_CALL HashIcoHeaderChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, BOOL
 	PNGSIP_ERROR_FINISH_END_CLEANUP;
 }
 
-BOOL PNGSIP_CALL HashCustomChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, DWORD chunkSize, DWORD* error) {
+BOOL PNGSIP_CALL HashCustomChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, LONG chunkStartOffset,DWORD chunkSize, DWORD* error) {
 	PNGSIP_ERROR_BEGIN;
 	DWORD bytesRead = 0;
 	BYTE buffer[BUFFER_SIZE];
 	DWORD remainder = (chunkSize % BUFFER_SIZE);
+
+	//update file pointer
+	if (SetFilePointer(hFile, chunkStartOffset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
+	{
+		PNGSIP_ERROR_FAIL(ERROR_BAD_FORMAT);
+	}
+
 	for (DWORD i = 0; i < chunkSize / BUFFER_SIZE; i++)
 	{
 		if (!ReadFile(hFile, &buffer, BUFFER_SIZE, &bytesRead, NULL))
@@ -229,12 +242,19 @@ BOOL PNGSIP_CALL HashHeader(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, DWORD& hashe
 }
 
 
-BOOL PNGSIP_CALL HashPNGChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, LONG startPosition, DWORD chunkSize, DWORD* error) {
+BOOL PNGSIP_CALL HashPNGChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, LONG chunkStartOffset, DWORD chunkSize, DWORD* error) {
 	PNGSIP_ERROR_BEGIN;
 	DWORD bytesRead = 0;
 	DWORD bytesReadTotal = 0;
 
 	DWORD result;
+
+	//update file pointer
+	if (SetFilePointer(hFile, chunkStartOffset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
+	{
+		PNGSIP_ERROR_FAIL(ERROR_BAD_FORMAT);
+	}
+
 	if (!HashHeader(hFile, hHash, bytesRead, &result)) {
 		PNGSIP_ERROR_FAIL(result);
 	}
@@ -242,7 +262,7 @@ BOOL PNGSIP_CALL HashPNGChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, LONG start
 	bytesRead = 0;
 
 	while (bytesReadTotal < chunkSize) {
-		if (!HashChunk(hFile, hHash, bytesRead, &result)) {
+		if (!HashPNGSubChunk(hFile, hHash, bytesRead, &result)) {
 			PNGSIP_ERROR_FAIL(result);
 		}
 		bytesReadTotal += bytesRead;
@@ -254,7 +274,7 @@ BOOL PNGSIP_CALL HashPNGChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, LONG start
 	PNGSIP_ERROR_FINISH_END_CLEANUP;
 }
 
-BOOL PNGSIP_CALL HashChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, DWORD &hashedSize, DWORD* error)
+BOOL PNGSIP_CALL HashPNGSubChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, DWORD &hashedSize, DWORD* error)
 {
 	PNGSIP_ERROR_BEGIN;
 	DWORD bytesRead = 0;
@@ -284,6 +304,7 @@ BOOL PNGSIP_CALL HashChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, DWORD &hashed
 			{
 				PNGSIP_ERROR_FAIL(ERROR_INVALID_OPERATION);
 			}
+			hashedSize += (PNG_CHUNK_HEADER_SIZE + size + PNG_CRC_SIZE);
 			PNGSIP_ERROR_SUCCESS();
 		}
 		if (!BCRYPT_SUCCESS(BCryptHashData(hHash, &buffer[0], PNG_CHUNK_HEADER_SIZE, 0)))

@@ -22,10 +22,10 @@ BOOL PNGSIP_CALL HashHeader(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, DWORD* error
 //BOOL PNGSIP_CALL HashChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, DWORD* error);
 
 
-BOOL PNGSIP_CALL HashPNGChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, LONG startPosition, DWORD chunkSize, DWORD* error);
-BOOL PNGSIP_CALL HashChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, DWORD& hashedSize, DWORD* error);
-BOOL PNGSIP_CALL HashCustomChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, DWORD chunkSize, DWORD* error);
-BOOL PNGSIP_CALL HashIcoHeaderChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, BOOL isOriginToUpdate, DWORD* error);
+BOOL PNGSIP_CALL HashPNGChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, LONG chunkStartOffset, DWORD chunkSize, DWORD* error);
+BOOL PNGSIP_CALL HashPNGSubChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, DWORD& hashedSize, DWORD* error);
+BOOL PNGSIP_CALL HashCustomChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, LONG chunkStartOffset, DWORD chunkSize, DWORD* error);
+BOOL PNGSIP_CALL HashIcoHeaderChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, LONG chunkStartOffset, BOOL isOriginToUpdate, DWORD* error);
 
 
 
