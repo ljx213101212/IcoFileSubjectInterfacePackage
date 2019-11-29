@@ -86,7 +86,11 @@ BOOL PNGSIP_CALL IcoDigestChunks(HANDLE hFile, BCRYPT_HASH_HANDLE hHashHandle,
 	DWORD result;
 	//Hash Before PNG Chunk.
 	if (process == SignToolProcess::verify) {
-		if (!HashIcoHeaderChunk(hFile, hHashHandle, beforePNGStartPosition, false, &result)) {
+		LONG icoHeaderEndOffset = 0;
+		if (!HashIcoHeaderChunk(hFile, hHashHandle, beforePNGStartPosition, &icoHeaderEndOffset,false, &result)) {
+			PNGSIP_ERROR_FAIL(result);
+		}
+		if (!HashCustomChunk(hFile, hHashHandle, icoHeaderEndOffset, GetBeforePNGSize(PNGStartPosition, icoHeaderEndOffset), &result)) {
 			PNGSIP_ERROR_FAIL(result);
 		}
 	}
@@ -100,7 +104,7 @@ BOOL PNGSIP_CALL IcoDigestChunks(HANDLE hFile, BCRYPT_HASH_HANDLE hHashHandle,
 	if (!HashPNGChunk(hFile, hHashHandle, PNGStartPosition, GetPNGSize(PNGStartPosition, afterPNGStartPosition), &result)) {
 		PNGSIP_ERROR_FAIL(result);
 	}
-	////Hash After PNG Chunk.
+	//Hash After PNG Chunk.
 	if (!HashCustomChunk(hFile, hHashHandle, afterPNGStartPosition, GetAfterPNGSize(afterPNGStartPosition, fileEndPosition), &result)) {
 		PNGSIP_ERROR_FAIL(result);
 	}
@@ -115,7 +119,7 @@ BOOL PNGSIP_CALL IcoDigestChunks(HANDLE hFile, BCRYPT_HASH_HANDLE hHashHandle,
 	PNGSIP_ERROR_FINISH_END_CLEANUP;
 }
 
-BOOL PNGSIP_CALL HashIcoHeaderChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, LONG chunkStartOffset,  BOOL isOriginToUpdate, DWORD* error) {
+BOOL PNGSIP_CALL HashIcoHeaderChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, LONG chunkStartOffset, LONG *icoHeaderEndOffset, BOOL isOriginToUpdate, DWORD* error) {
 
 	PNGSIP_ERROR_BEGIN;
 	BYTE headerBuffer[BUFFER_SIZE];
@@ -128,6 +132,7 @@ BOOL PNGSIP_CALL HashIcoHeaderChunk(HANDLE hFile, BCRYPT_HASH_HANDLE hHash, LONG
 	icoFileInfo.GetIcoFileInfo(hFile, TEXT(""), &info);
 	DWORD pngHeaderSizeOffset = ICO_HEADER_SIZE + (info.nthImageIsPng - 1) * ICO_DIRECTORY_CHUNK_SIZE + ICO_OFFSET_OF_DATA_SIZE_IN_HEADER;
 	DWORD icoHeaderOffset = ICO_HEADER_SIZE + info.numOfIco * ICO_DIRECTORY_CHUNK_SIZE;
+	*icoHeaderEndOffset = icoHeaderOffset;
 	DWORD signatureSize = info.sigChunkSize;
 	LONG size = 0;
 	INT32 restNumOfBMPFile = 0;
